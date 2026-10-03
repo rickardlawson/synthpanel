@@ -153,7 +153,7 @@
     <div class="key"><span><i class="sw-bar"></i>Utvalget</span><span><i class="sw-ref"></i>Hele befolkningen</span></div>
     <div class="dims" id="dims"></div>
 
-    <footer id="foot">Kilder: SSB (befolkning, utdanning, arbeid, husholdning, inntekt, bolig) og European Social Survey runde 9–11 (verdier og holdninger). Tallene er vektede estimater fra en syntetisk populasjon kalibrert mot offisiell statistikk.</footer>
+    <footer id="foot">Kilder: SSB (befolkning, utdanning, arbeid, husholdning, inntekt, bolig, valgdeltakelse, velgerstrømmer, Norsk mediebarometer, IKT-bruk), Valgdirektoratet (stortingsvalget 2025) og European Social Survey runde 9–11 (verdier, holdninger og partivalg). Tallene er vektede estimater fra en syntetisk populasjon kalibrert mot offisiell statistikk.</footer>
   </main>
 </div>
 <div class="tip" id="tip" role="tooltip"></div>
@@ -164,6 +164,18 @@ const fmt = new Intl.NumberFormat("nb-NO");
 const pct = v => (v*100).toLocaleString("nb-NO",{maximumFractionDigits: v < 0.01 ? 2 : 1}) + " %";
 
 const AGE = ["18-19","20-24","25-29","30-39","40-49","50-59","60-66","67-79","80+"];
+const PARTY_ORDER = ["A","FRP","H","SP","SV","RØDT","MDG","KRF","V","ANDRE"];
+const PARTY_LABEL = {A:"Ap", FRP:"FrP", H:"Høyre", SP:"Sp", SV:"SV", RØDT:"Rødt", MDG:"MDG", KRF:"KrF", V:"Venstre", ANDRE:"Andre"};
+const MEDIA_GROUPS = {daglig:"Bruker daglig", netthandel:"Har handlet på nett siste år"};
+const MEDIA = [
+  ["daglig_facebook","Facebook","daglig"],["daglig_instagram","Instagram","daglig"],["daglig_snapchat","Snapchat","daglig"],
+  ["daglig_tiktok","TikTok","daglig"],["daglig_youtube","YouTube","daglig"],["daglig_linkedin","LinkedIn","daglig"],
+  ["daglig_nrktv","NRK TV","daglig"],["daglig_netflix","Netflix","daglig"],["daglig_tv2play","TV 2 Play","daglig"],
+  ["daglig_viaplay","Viaplay","daglig"],["daglig_disney","Disney+","daglig"],
+  ["netthandel_dagligvarer","Dagligvarer","netthandel"],["netthandel_klaer","Klær og sport","netthandel"],
+  ["netthandel_reiser","Reiser og overnatting","netthandel"],["netthandel_takeaway","Take-away","netthandel"],
+  ["netthandel_kosmetikk","Kosmetikk og velvære","netthandel"],
+];
 const DIMS = [
   {key:"kjonn", title:"Kjønn", order:["kvinne","mann"],
    label:{kvinne:"Kvinner", mann:"Menn"}},
@@ -201,9 +213,21 @@ const DIMS = [
   {key:"politisk_sted", title:"Politisk ståsted", order:["venstre","sentrum","høyre"],
    label:{venstre:"Venstre", sentrum:"Sentrum", høyre:"Høyre"}},
   {key:"politisk_interesse", title:"Interesse for politikk", order:["lav","høy"], label:{lav:"Lav", høy:"Høy"}},
+  {key:"parti_2025", title:"Stemte ved stortingsvalget 2025", order:[...PARTY_ORDER, "stemte_ikke", "ikke_stemmerett"],
+   label:{...PARTY_LABEL, stemte_ikke:"Stemte ikke", ikke_stemmerett:"Ikke stemmerett"}},
+  {key:"partisympati", title:"Nærmeste parti (alle)", order:PARTY_ORDER, label:PARTY_LABEL},
+  ...MEDIA.map(([key, name, group])=>({key, title:name, order:["ja"], label:{ja:name}, group})),
 ];
-const SECTIONS = {kjonn:"Hvem", arbeidsstatus:"Livssituasjon, økonomi og bolig", verdi_apenhet:"Verdier og holdninger"};
-const SECTION_NOTE = {verdi_apenhet: "valuesNote"};
+const SECTIONS = {kjonn:"Hvem", arbeidsstatus:"Livssituasjon, økonomi og bolig", verdi_apenhet:"Verdier og holdninger",
+                  parti_2025:"Politikk", daglig_facebook:"Medier og netthandel"};
+const SECTION_NOTE = {verdi_apenhet:"valuesNote", parti_2025:"politicsNote", daglig_facebook:"mediaNote"};
+const STATIC_NOTES = {
+  politicsNote: "Hver person arver partivalget til en ESS-respondent (2017/2021), ført frem til 2025 med SSBs velgerstrømmer "
+    + "og kalibrert mot valgresultatet i hvert fylke og Valgundersøkelsens partivalg etter kjønn og alder. "
+    + "Inntektsforskjellene er svakere enn i Valgundersøkelsen. Små partier er usikre.",
+  mediaNote: "Fra Norsk mediebarometer og SSBs IKT-undersøkelse. SSB publiserer bare tall etter kjønn og alder, så bruken "
+    + "følger kun disse – ikke utdanning, bosted eller verdier, og ikke sammenhengen mellom tjenestene.",
+};
 const state = Object.fromEntries(DIMS.map(d=>[d.key, new Set()]));
 let base = {};           // hele befolkningen per dimensjon
 let fylkeCode = {};      // navn -> kode
@@ -246,9 +270,24 @@ async function init(){
 function renderFilters(){
   const host = document.getElementById("filters");
   host.innerHTML = "";
+  const mediaBoxes = {};
   for (const d of DIMS){
     if (SECTIONS[d.key]){
       const h = document.createElement("p"); h.className = "sec"; h.textContent = SECTIONS[d.key]; host.appendChild(h);
+    }
+    if (d.group){
+      if (!mediaBoxes[d.group]){
+        const fs = document.createElement("fieldset");
+        fs.innerHTML = `<legend>${MEDIA_GROUPS[d.group]}</legend><div class="chips"></div>`;
+        host.appendChild(fs); mediaBoxes[d.group] = fs.querySelector(".chips");
+      }
+      const b = document.createElement("button");
+      b.className = "chip"; b.type = "button"; b.textContent = d.title;
+      b.setAttribute("aria-pressed", state[d.key].has("ja"));
+      b.onclick = () => { state[d.key].has("ja") ? state[d.key].delete("ja") : state[d.key].add("ja");
+                          b.setAttribute("aria-pressed", state[d.key].has("ja")); refresh(); };
+      mediaBoxes[d.group].appendChild(b);
+      continue;
     }
     const fs = document.createElement("fieldset");
     fs.innerHTML = `<legend>${d.title}</legend><div class="chips"></div>`;
@@ -334,6 +373,18 @@ function describe(){
     const v = pick(k);
     if (v.length) parts.push(`med ${orNb(v.map(x=>({lav:"lav", middels:"middels", høy:"høy"})[x]))} ${noun}`);
   }
+  const pv = pick("parti_2025");
+  if (pv.length){
+    const voted = pv.filter(v=>PARTY_LABEL[v]).map(v=>PARTY_LABEL[v]);
+    const other = pv.filter(v=>!PARTY_LABEL[v]).map(v=>({stemte_ikke:"som ikke stemte", ikke_stemmerett:"uten stemmerett"})[v]);
+    parts.push(orNb([...(voted.length ? [`som stemte ${orNb(voted)} i 2025`] : []), ...other]));
+  }
+  const sy = pick("partisympati").map(v=>PARTY_LABEL[v]);
+  if (sy.length) parts.push(`som står nærmest ${orNb(sy)}`);
+  const daily = MEDIA.filter(([k,,g])=>g==="daglig" && state[k].has("ja")).map(([,n])=>n);
+  if (daily.length) parts.push(`som bruker ${joinNb(daily)} daglig`);
+  const shop = MEDIA.filter(([k,,g])=>g==="netthandel" && state[k].has("ja")).map(([,n])=>n.toLowerCase());
+  if (shop.length) parts.push(`som har kjøpt ${joinNb(shop)} på nett`);
   const ps = pick("politisk_sted");
   if (ps.length) parts.push("som plasserer seg " + orNb(ps.map(v=>({venstre:"til venstre", sentrum:"i sentrum", høyre:"til høyre"})[v])));
   const any = Object.values(state).some(s=>s.size);
@@ -376,7 +427,29 @@ async function refresh(){
 function renderDims(per, nAgents){
   const host = document.getElementById("dims");
   host.innerHTML = "";
+  const mediaPanels = {};
   DIMS.forEach((d, i)=>{
+    if (d.group){
+      if (SECTIONS[d.key]){
+        const h = document.createElement("div"); h.className = "dims-sec";
+        h.innerHTML = `<h2>${SECTIONS[d.key]}</h2><p class="h2-sub" id="${SECTION_NOTE[d.key]}"></p>`;
+        host.appendChild(h);
+      }
+      if (!mediaPanels[d.group]){
+        const w = document.createElement("section"); w.className = "dim";
+        w.innerHTML = `<h3>${MEDIA_GROUPS[d.group]}</h3>`; host.appendChild(w); mediaPanels[d.group] = w;
+      }
+      const r = per[i].find(x=>x[d.key]==="ja");
+      const s = r ? r.andel : 0, b = base[d.key]["ja"] || 0;
+      const row = document.createElement("div"); row.className = "row";
+      row.innerHTML = `<span class="lab">${d.title}</span>
+        <span class="track"><span class="bar" style="width:${(s*100).toFixed(2)}%"></span>
+        <span class="refmark" style="left:${(b*100).toFixed(2)}%"></span></span>
+        <span class="val">${s ? pct(s) : "–"}</span>`;
+      row.dataset.tip = `<strong>${d.title}</strong><br>Utvalget: ${pct(s)}<br>Hele befolkningen: ${pct(b)}`;
+      mediaPanels[d.group].appendChild(row);
+      return;
+    }
     const seg = Object.fromEntries(per[i].map(r=>[d.key==="fylke" ? fylkeCode[r.fylke_navn] : r[d.key], r]));
     let order = d.order;
     if (d.key==="fylke") order = [...order].sort((a,b)=>(seg[b]?.andel||0)-(seg[a]?.andel||0));
@@ -406,6 +479,9 @@ function renderDims(per, nAgents){
   });
   const note = document.getElementById("valuesNote");
   if (note) note.textContent = valuesNoteText;
+  for (const [id, text] of Object.entries(STATIC_NOTES)){
+    const el = document.getElementById(id); if (el) el.textContent = text;
+  }
 }
 
 const tip = document.getElementById("tip");

@@ -51,6 +51,8 @@ vektene kalibreres (raking) mot 15 marginaler fra SSB i to pass.
 | Inntektsdesil | fylke, husholdningstype, lavinntekt | 12563 | – (trekkes etter kalibrering) |
 | Eierstatus og boligtype | fylke, husholdningstype, inntektskvartil (dempet) | 14901, 14900, 14921 | – (dempingen tilpasses så eierstatus per kvartil treffer 14900) |
 | Verdier og holdninger | kjønn, alder, utdanning, inntekt, region, innvandring, status, bosted, aleneboende | ESS 9–11 | – (statistisk matching, se under) |
+| Stemmerett, valgdeltakelse, parti 2025 | ESS-donorens partivalg, kjønn, alder, utdanning, innvandring, status | Valgdirektoratet, 11666, 10440, 13818, 13446, 13554 | frammøte og partier per fylke; parti × kjønn × alder |
+| Medier og netthandel | kjønn, alder | 14511, 14512, 07001 | – |
 
 Resultat v0.2: 50 751 agenter, effektiv utvalgsstørrelse ≈ 45 500. Kommunetall
 er eksakte. Alle marginaler ligger under 0,2 % feilplassert befolkning, unntatt
@@ -101,6 +103,39 @@ prinsippet: tallene kommer fra ekte respondenter, ikke fra språkmodellen.
   Lokale forskjeller utover region og bosted fanges ikke.
 - **ESS-vilkårene** skiller mellom forsknings- og kommersiell bruk. Må avklares
   før panelet selges.
+
+## Politisk lag
+
+1. **Partipreferanse:** ESS-donorens partivalg (2017 eller 2021) føres frem til
+   2025 med SSBs velgerstrømmer fra Valgundersøkelsen (11666): 2017→2021→2025.
+   Donorer uten partivalg bruker partiet de står nærmest, ellers landsresultatet.
+2. **Stemmerett:** innvandrere får sannsynlighet for statsborgerskap fra 13446.
+3. **Valgdeltakelse:** 10440 (kjønn × alder × utdanning), justert for
+   innvandringskategori og status (13818), forskjøvet per fylke til faktisk frammøte.
+4. **Partivalg:** preferansene skaleres vekselvis mot valgresultatet per fylke
+   (Valgdirektoratet, alle 357 kommuner) og partivalg etter kjønn × alder (13554).
+
+**Kontroll:** Før 13554 ble tatt inn, traff panelet partivalg etter kjønn × alder
+med 2,0 pp snittfeil (landssnitt 2,7 pp; 80 celler). Det bommet på det nye i
+2025 – unge menn til FrP (38 % faktisk, 25 % i panelet). Etter kalibrering
+treffer kjønn × alder og fylke. Uavhengig sjekk (13698, ikke brukt): Høyre øker
+og SV faller med inntekt i panelet som i Valgundersøkelsen, men forskjellene er
+svakere (Høyre 13→16 % fra laveste til høyeste desil, mot 12→27 % fra laveste
+til høyeste personinntekt i 13698 – ulike inntektsmål).
+
+**Svakheter:** små partier bygger på få respondenter; inntektsforskjellene er
+for svake; partisympati for ikke-velgere er en modell, ikke målt.
+**Bruk:** partitilhørighet er sensitivt. Agentene er syntetiske, men bruk til
+politisk målretting bør vurderes eksplisitt før kommersiell lansering.
+
+## Medielag
+
+Daglig bruk av Facebook, Instagram, Snapchat, TikTok, YouTube, LinkedIn,
+NRK TV, Netflix, TV 2 Play, Viaplay og Disney+ (Norsk mediebarometer 2025), og
+netthandel siste 12 mnd (dagligvarer, klær, reiser, take-away, kosmetikk;
+nyeste år med tall, 2024/2025). SSB publiserer bare etter kjønn og alder, så
+laget følger bare disse. Mikrodata fra Mediebarometeret (Sikt) vil gi
+sammenheng med utdanning, bosted og verdier, og mellom tjenestene.
 
 ### Kjente svakheter i boliglaget
 
@@ -159,8 +194,9 @@ Opoint-data avtales eksplisitt før kobling.
 1. ✅ L0 befolkningsramme + API + utforsker
 2. ✅ L0b: innvandringskategori, hovedstatus, husholdning, lavinntekt, inntekt
 3. ✅ L2 verdilag fra ESS + første testsett; bolig
-4. Forbruksprofil (SSB forbruksundersøkelse), netthandel, mediebruk, fritid
-5. Utvidet testsett: Norsk medborgerpanel og publiserte målinger
-6. L3 arketyper v0 (latent klasseanalyse på verdilaget)
-7. L4 første scenario ende-til-ende (Tine), målt mot testsettet
-8. L5 kobling til Signalist
+4. ✅ Politisk lag (valg 2025) og medielag (kjønn × alder)
+5. Forbruksprofil (SSB forbruksundersøkelse), fritid; Mediebarometer-mikrodata (Sikt)
+6. Utvidet testsett: Norsk medborgerpanel og publiserte målinger
+7. L3 arketyper v0 (latent klasseanalyse på verdilaget)
+8. L4 første scenario ende-til-ende (Tine), målt mot testsettet
+9. L5 kobling til Signalist

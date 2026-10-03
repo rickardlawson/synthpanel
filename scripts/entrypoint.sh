@@ -4,6 +4,8 @@ set -e
 if [ ! -f "$SYNTHPANEL_DATA_DIR/processed/agents.parquet" ]; then
   echo "Ingen populasjon funnet – henter fra SSB og bygger (tar under ett minutt)..."
   python -m synthpanel.frame.fetch
+  python -m synthpanel.politics.fetch
+  python -m synthpanel.media.layer
   if [ -n "$ESS_USER_ID" ]; then python -m synthpanel.values.ess; else echo "ESS_USER_ID ikke satt – bygger uten verdilag"; fi
   python -m synthpanel.frame.build
 fi

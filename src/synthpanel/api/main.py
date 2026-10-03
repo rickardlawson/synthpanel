@@ -16,7 +16,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, create_model
 
 from synthpanel import __version__, config
 
@@ -57,35 +57,21 @@ DIMENSIONS = {
     "religiositet": "Hvor religiøs (ESS, lav/middels/høy)",
     "politisk_interesse": "Interesse for politikk (ESS, høy/lav)",
     "klimabekymring": "Bekymring for klimaendringer (ESS, lav/middels/høy)",
+    "stemmerett": "Stemmerett ved stortingsvalg (ja/nei)",
+    "stemte_2025": "Stemte ved stortingsvalget 2025 (ja/nei/ikke_stemmerett)",
+    "parti_2025": "Parti ved stortingsvalget 2025, eller stemte_ikke / ikke_stemmerett",
+    "partisympati": "Nærmeste parti (også for dem som ikke stemte)",
 }
+from synthpanel.media.layer import COLUMNS as _MEDIA  # noqa: E402
+DIMENSIONS.update({c: f"Medie/netthandel: {lab} (ja/nei)" for c, lab in _MEDIA.items()})
 
 
-class Filters(BaseModel):
-    """Filtre kan gjentas, f.eks. ?fylke=03&fylke=32. Innen ett filter betyr flere verdier «eller»."""
-    kjonn: list[str] = []
-    aldersband: list[str] = []
-    fylke: list[str] = []
-    kommune: list[str] = []
-    sentralitet: list[str] = []
-    utdanning: list[str] = []
-    bakgrunn: list[str] = []
-    innvkat: list[str] = []
-    arbeidsstatus: list[str] = []
-    husholdning: list[str] = []
-    lavinntekt: list[str] = []
-    inntektsdesil: list[str] = []
-    eierstatus: list[str] = []
-    boligtype: list[str] = []
-    verdi_apenhet: list[str] = []
-    verdi_trygghet: list[str] = []
-    verdi_selvhevdelse: list[str] = []
-    verdi_fellesskap: list[str] = []
-    tillit: list[str] = []
-    risikovilje: list[str] = []
-    politisk_sted: list[str] = []
-    religiositet: list[str] = []
-    politisk_interesse: list[str] = []
-    klimabekymring: list[str] = []
+# Filtermodellen genereres fra DIMENSIONS, så nye dimensjoner bare trenger én linje over.
+Filters = create_model(
+    "Filters",
+    __doc__="Filtre kan gjentas, f.eks. ?fylke=03&fylke=32. Innen ett filter betyr flere verdier «eller».",
+    **{k: (list[str], Field(default_factory=list, description=v)) for k, v in DIMENSIONS.items()},
+)
 
 
 class BreakdownParams(Filters):

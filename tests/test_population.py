@@ -203,3 +203,54 @@ def test_value_layer_beats_national_average_on_holdout():
     r = json.loads((config.PROCESSED_DIR / "validation_report.json").read_text(encoding="utf-8"))
     assert r["snittfeil_panel_pp"] < r["snittfeil_landssnitt_pp"]
     assert r["snittfeil_panel_pp"] < r["stoygulv_pp"] + 1.5
+
+
+# --- Politikk og medier ---------------------------------------------------------
+
+def _pol_ready():
+    return (config.RAW_DIR / "valg_resultat_2025.parquet").exists()
+
+
+@pytest.mark.skipif(not _pol_ready(), reason="valgdata ikke hentet")
+def test_election_2025_national_and_oslo(agents):
+    from synthpanel.politics import assign
+    r = pd.read_parquet(config.RAW_DIR / "valg_resultat_2025.parquet")
+    nat = r[assign.PARTIES].sum() / r[assign.PARTIES].sum().sum()
+    voters = agents[agents["stemte_2025"] == "ja"]
+    sim = voters.groupby("parti_2025")["vekt"].sum() / voters["vekt"].sum()
+    assert (sim.reindex(nat.index).fillna(0) - nat).abs().max() < 0.008
+    eligible = agents.loc[agents["stemmerett"] == "ja", "vekt"].sum()
+    assert abs(eligible - r["stemmeberettigede"].sum()) / r["stemmeberettigede"].sum() < 0.02
+    assert abs(voters["vekt"].sum() / eligible - r["godkjente"].sum() / r["stemmeberettigede"].sum()) < 0.01
+    oslo = voters[voters["fylke"] == "03"]
+    ro = r[r["kommune"] == "0301"]
+    assert abs(oslo.loc[oslo["parti_2025"] == "A", "vekt"].sum() / oslo["vekt"].sum()
+               - float(ro["A"].iloc[0] / ro[assign.PARTIES].sum(axis=1).iloc[0])) < 0.02
+
+
+@pytest.mark.skipif(not _pol_ready(), reason="valgdata ikke hentet")
+def test_young_men_frp_matches_election_survey(agents):
+    """13554 er brukt i kalibreringen – dette sikrer at den virker (unge menn: FrP 38 % i 2025)."""
+    v = agents[(agents["stemte_2025"] == "ja") & (agents["kjonn"] == "mann") & agents["alder"].between(18, 34)]
+    share = v.loc[v["parti_2025"] == "FRP", "vekt"].sum() / v["vekt"].sum()
+    assert 0.33 < share < 0.43
+
+
+@pytest.mark.skipif(not _pol_ready(), reason="valgdata ikke hentet")
+def test_heldout_income_gradient_direction(agents):
+    """Uavhengig (13698 ikke brukt): Høyre øker og SV faller med inntekt."""
+    v = agents[agents["stemte_2025"] == "ja"]
+    sh = lambda d, p: d.loc[d["parti_2025"] == p, "vekt"].sum() / d["vekt"].sum()
+    low, high = v[v["inntektsdesil"] <= 3], v[v["inntektsdesil"] == 10]
+    assert sh(high, "H") > sh(low, "H")
+    assert sh(low, "SV") > sh(high, "SV")
+
+
+def test_media_rates_follow_age(agents):
+    if "daglig_tiktok" not in agents.columns:
+        pytest.skip("medielag ikke bygget")
+    y = agents[(agents["kjonn"] == "kvinne") & agents["alder"].between(18, 24)]
+    o = agents[agents["alder"] >= 80]
+    share = lambda d: d.loc[d["daglig_tiktok"] == "ja", "vekt"].sum() / d["vekt"].sum()
+    assert abs(share(y) - 0.80) < 0.06 and share(o) < 0.05
+    assert (agents["netthandel_dagligvarer"] == "ja").mean() > 0.05

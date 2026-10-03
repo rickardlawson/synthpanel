@@ -25,7 +25,14 @@ OTHER_ITEMS = ["ppltrst", "trstprl", "trstlgl", "trstplc", "trstplt", "polintr",
                "rlgdgr", "happy", "wrclmch", "ccrdprs"]
 
 DEMOGRAPHICS = ["idno", "essround", "gndr", "agea", "eisced", "hinctnta", "region", "domicil",
-                "mnactic", "brncntr", "facntr", "mocntr", "hhmmb", "pspwght", "anweight"]
+                "mnactic", "brncntr", "facntr", "mocntr", "hhmmb", "pspwght", "anweight", "vote"]
+
+# Partikoder varierer mellom runder (verifisert mot verdietikettene i SPSS-filene).
+# Runde 9–10 spør om valget i 2017, runde 11 om valget i 2021.
+PARTY_VARS = {9: ("prtvtbno", "prtclbno", 2017), 10: ("prtvtbno", "prtclbno", 2017), 11: ("prtvtcno", "prtclcno", 2021)}
+_COMMON = {1: "RØDT", 2: "SV", 3: "A", 4: "V", 5: "KRF", 6: "SP", 7: "H", 8: "FRP", 11: "ANDRE"}
+PARTY_CODES = {2017: {**_COMMON, 9: "ANDRE", 10: "MDG"},   # 9 = Kystpartiet
+               2021: {**_COMMON, 9: "MDG", 10: "ANDRE"}}   # 10 = Pasientfokus
 
 # Koder for «vet ikke», «nekter» osv. per skala.
 MISSING = {6: {7, 8, 9}, 10: {77, 88, 99}, 5: {7, 8, 9}, 4: {7, 8, 9}}
@@ -42,11 +49,20 @@ def _download(doi: str, user_id: str) -> pd.DataFrame:
     return pd.read_parquet(io.BytesIO(r.content))
 
 
-def harmonize(d: pd.DataFrame) -> pd.DataFrame:
+def harmonize(d: pd.DataFrame, rnd: int | None = None) -> pd.DataFrame:
     """Plukk ut Norge, gi verdispørsmålene felles navn og sett manglende svar til NaN."""
     d = d[d["cntry"] == "NO"].copy()
+    if rnd in PARTY_VARS:
+        vote_var, close_var, year = PARTY_VARS[rnd]
+        codes = PARTY_CODES[year]
+        d["siste_valg_aar"] = year
+        d["siste_parti"] = d[vote_var].map(codes) if vote_var in d else np.nan
+        d.loc[d["vote"] == 2, "siste_parti"] = "ikke_stemt"
+        d.loc[d["vote"] == 3, "siste_parti"] = "ikke_stemmerett"
+        d["naermeste_parti"] = d[close_var].map(codes) if close_var in d else np.nan
     d = d.rename(columns={f"{v}a": v for v in VALUE_ITEMS if f"{v}a" in d.columns and v not in d.columns})
-    cols = [c for c in DEMOGRAPHICS + VALUE_ITEMS + OTHER_ITEMS if c in d.columns]
+    cols = [c for c in DEMOGRAPHICS + VALUE_ITEMS + OTHER_ITEMS + ["siste_valg_aar", "siste_parti", "naermeste_parti"]
+            if c in d.columns]
     d = d[cols].copy()
     for c in VALUE_ITEMS + OTHER_ITEMS:
         if c not in d.columns:
@@ -68,7 +84,7 @@ def fetch() -> pd.DataFrame:
     rounds = config.load("values")["ess"]["rounds"]
     parts = []
     for rnd, spec in rounds.items():
-        d = harmonize(_download(spec["doi"], user_id))
+        d = harmonize(_download(spec["doi"], user_id), int(rnd))
         d["essround"] = int(rnd)
         parts.append(d)
         print(f"ESS runde {rnd}: {len(d)} norske respondenter")

@@ -10,7 +10,9 @@ segmentene er.
 > agenter som gjenskaper SSB-tallene for kjønn, alder, kommune, sentralitet,
 > utdanning, landbakgrunn, innvandringskategori, hovedstatus, husholdning,
 > lavinntekt, inntekt og bolig – og som har fått verdier og holdninger fra
-> European Social Survey (testet mot respondenter modellen ikke har sett).
+> European Social Survey (testet mot respondenter modellen ikke har sett),
+> partivalg ved stortingsvalget 2025 (kalibrert mot valgresultatet per fylke)
+> og bruk av sosiale medier, strømming og netthandel.
 > Scenariomotoren (L4) har definert kontrakt, men er ikke bygget ennå. Se [docs/architecture.md](docs/architecture.md).
 
 ## Kom i gang
@@ -84,6 +86,8 @@ src/synthpanel/
   values/ess.py             henter ESS via API (Norge, runde 9–11)
   values/match.py           verdilag: statistisk matching av ESS-respondenter
   values/validate.py        testsett mot holdte ESS-respondenter
+  politics/                 valgresultat 2025, velgerstrømmer, deltakelse -> parti per agent
+  media/layer.py            sosiale medier, strømming, netthandel
   api/main.py               FastAPI
   web/index.html            befolkningsutforskeren (ren HTML/JS, ingen byggesteg)
 tests/                      kalibrering, SSB-avstemming, API
@@ -99,7 +103,8 @@ noe må skrives om. Port 8090 for å ikke kollidere med Signalist på 8080.
 
 ## Datakilder
 
-Åpne data: 19 SSB-tabeller pluss Klass 128 (sentralitet), og European Social
+Åpne data: 28 SSB-tabeller pluss Klass 128 (sentralitet), Valgdirektoratets
+resultater for stortingsvalget 2025 (alle kommuner), og European Social
 Survey runde 9–11 (4 154 norske respondenter, 2018–2024). ESS-vilkårene skiller
 mellom forsknings- og kommersiell bruk – avklar før panelet selges. Oversikt over
 hvilken tabell som brukes til hva står i [docs/architecture.md](docs/architecture.md). Se `GET /meta` for nøyaktige perioder og

@@ -206,10 +206,22 @@ def build() -> dict:
     else:
         import sys
         print("Merk: ESS-data mangler – verdilaget hoppes over. Kjør `make fetch-ess`.", file=sys.stderr)
+
+    # Politisk lag (krever verdilaget for partipreferanse, og valgdata)
+    from synthpanel.politics import assign as politics
+    pol_cols = []
+    if donors is not None and (config.RAW_DIR / "valg_resultat_2025.parquet").exists():
+        a = politics.attach(a, donors, rng)
+        pol_cols = ["stemmerett", "stemte_2025", "parti_2025", "partisympati"]
+
+    # Medielag
+    from synthpanel.media import layer as media
+    a = media.attach(a, rng)
+    media_cols = [c for c in media.COLUMNS if c in a.columns]
     a.insert(0, "agent_id", [f"NO-{i:06d}" for i in range(len(a))])
     a = a[["agent_id", "kommune", "kommune_navn", "fylke", "fylke_navn", "sentralitet",
            "kjonn", "alder", "aldersband", "utdanning", "bakgrunn", "innvkat",
-           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "eierstatus", "boligtype", *value_cols, "vekt"]]
+           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "eierstatus", "boligtype", *value_cols, *pol_cols, *media_cols, "vekt"]]
 
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     a.to_parquet(config.PROCESSED_DIR / "agents.parquet", index=False)

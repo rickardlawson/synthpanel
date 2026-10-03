@@ -3,8 +3,10 @@
 install:
 	pip install -e ".[dev]"
 
-fetch:          ## Hent rådata fra SSB
+fetch:          ## Hent rådata fra SSB og Valgdirektoratet
 	python -m synthpanel.frame.fetch
+	python -m synthpanel.politics.fetch
+	python -m synthpanel.media.layer
 
 build:          ## Bygg syntetisk populasjon fra rådata
 	python -m synthpanel.frame.build
