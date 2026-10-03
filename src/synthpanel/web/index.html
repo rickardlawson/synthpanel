@@ -66,6 +66,7 @@
     font-size:clamp(1.9rem, 3.4vw, 3rem); font-weight:700; line-height:1.08;
     letter-spacing:-.025em; margin:0 0 18px; max-width:22ch; text-wrap:balance;
   }
+  .who.long{font-size:clamp(1.5rem, 2.4vw, 2.1rem); max-width:34ch}
   .count{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 22px; margin:0 0 26px}
   .count .n{font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums}
   .count .p{color:var(--ink-2); font-size:1.05rem}
@@ -90,7 +91,7 @@
   .dims{display:grid; grid-template-columns:repeat(auto-fill, minmax(330px,1fr)); gap:34px 44px}
   .dim h3{font-size:.98rem; font-weight:600; margin:0 0 10px}
   .row{
-    display:grid; grid-template-columns:128px minmax(0,1fr) 52px; align-items:center;
+    display:grid; grid-template-columns:150px minmax(0,1fr) 52px; align-items:center;
     gap:10px; font-size:.84rem; min-height:24px; position:relative;
   }
   .row .lab{color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -170,6 +171,19 @@ const DIMS = [
           uh_kort:"Kort høyere", uh_lang:"Lang høyere", uoppgitt:"Uoppgitt"}},
   {key:"bakgrunn", title:"Landbakgrunn", order:["norsk","europa","asia","afrika","annet"],
    label:{norsk:"Norsk", europa:"Europa", asia:"Asia", afrika:"Afrika", annet:"Annen verdensdel"}},
+  {key:"innvkat", title:"Innvandringskategori", order:["ovrige","innvandrer","norskfodt_innv_foreldre"],
+   label:{ovrige:"Uten innvandrerbakgrunn", innvandrer:"Innvandrer", norskfodt_innv_foreldre:"Norskfødt m. innv.foreldre"}},
+  {key:"arbeidsstatus", title:"Hovedstatus", order:["sysselsatt","student","pensjonist","aap_ufor","arbeidsledig","tiltak","annet"],
+   label:{sysselsatt:"I arbeid", student:"Under utdanning", pensjonist:"Pensjonist", aap_ufor:"AAP eller uføretrygd",
+          arbeidsledig:"Arbeidsledig", tiltak:"Tiltak", annet:"Annet"}},
+  {key:"husholdning", title:"Husholdning", order:["aleneboende","par_uten_barn","par_smaa_barn","par_store_barn",
+     "enslig_smaa_barn","enslig_store_barn","voksne_barn","flerfamilie","annet"],
+   label:{aleneboende:"Bor alene", par_uten_barn:"Par uten barn", par_smaa_barn:"Par, yngste barn 0–5",
+          par_store_barn:"Par, yngste barn 6–17", enslig_smaa_barn:"Alene med barn 0–5", enslig_store_barn:"Alene med barn 6–17",
+          voksne_barn:"Med voksne barn", flerfamilie:"Flerfamilie", annet:"Annet"}},
+  {key:"lavinntekt", title:"Lavinntekt (EU-60)", order:["ja","nei"], label:{ja:"Lavinntekt", nei:"Ikke lavinntekt"}},
+  {key:"inntektsdesil", title:"Husholdningsinntekt (desil)", order:["1","2","3","4","5","6","7","8","9","10"],
+   label:{"1":"1 – lavest","2":"2","3":"3","4":"4","5":"5","6":"6","7":"7","8":"8","9":"9","10":"10 – høyest"}},
 ];
 const state = Object.fromEntries(DIMS.map(d=>[d.key, new Set()]));
 let base = {};           // hele befolkningen per dimensjon
@@ -227,6 +241,9 @@ function buildGrid(){
 function joinNb(list){
   return list.length <= 1 ? list.join("") : list.slice(0,-1).join(", ") + " og " + list.at(-1);
 }
+function orNb(list){
+  return list.length <= 1 ? list.join("") : list.slice(0,-1).join(", ") + " eller " + list.at(-1);
+}
 function ageText(sel){
   const idx = AGE.map((a,i)=>sel.has(a)?i:-1).filter(i=>i>=0);
   if (!idx.length) return "";
@@ -254,6 +271,25 @@ function describe(){
     const foreign = bg.filter(v=>v!=="norsk").length;
     parts.push(bg.length===1 && bg[0]==="norsk" ? "med norsk bakgrunn" : (foreign===bg.length ? "med bakgrunn fra " : "med ") + joinNb(ln));
   }
+  const iv = pick("innvkat");
+  if (iv.length) parts.push(orNb(iv.map(v=>({ovrige:"uten innvandrerbakgrunn", innvandrer:"som er innvandrere",
+      norskfodt_innv_foreldre:"som er norskfødte med innvandrerforeldre"})[v])));
+  const st = pick("arbeidsstatus");
+  if (st.length) parts.push(orNb(st.map(v=>({sysselsatt:"i arbeid", student:"under utdanning", pensjonist:"som er pensjonister",
+      aap_ufor:"på AAP eller uføretrygd", arbeidsledig:"som er arbeidsledige", tiltak:"på arbeidsmarkedstiltak", annet:"med annen hovedstatus"})[v])));
+  const hh = pick("husholdning");
+  if (hh.length) parts.push(orNb(hh.map(v=>({aleneboende:"som bor alene", par_uten_barn:"i par uten barn hjemme",
+      par_smaa_barn:"i par med små barn", par_store_barn:"i par med barn 6–17 år", enslig_smaa_barn:"som bor alene med små barn",
+      enslig_store_barn:"som bor alene med barn 6–17 år", voksne_barn:"i husholdning med voksne barn",
+      flerfamilie:"i flerfamiliehusholdning", annet:"i annen husholdningstype"})[v])));
+  const li = pick("lavinntekt");
+  if (li.length===1) parts.push(li[0]==="ja" ? "med lavinntekt" : "uten lavinntekt");
+  const inc = pick("inntektsdesil").map(Number);
+  if (inc.length){
+    const contiguous = inc.every((v,i)=>i===0||v===inc[i-1]+1);
+    parts.push("med husholdningsinntekt i " + (inc.length===1 ? `desil ${inc[0]}` :
+      contiguous ? `desil ${inc[0]}–${inc.at(-1)}` : `desil ${joinNb(inc.map(String))}`));
+  }
   const any = Object.values(state).some(s=>s.size);
   return any ? parts.join(" ") : "Alle voksne i Norge";
 }
@@ -263,7 +299,9 @@ async function refresh(){
   const my = ++seq;
   const fp = filterParams();
   document.getElementById("reset").disabled = !Object.keys(fp).length;
-  document.getElementById("who").textContent = describe();
+  const who = document.getElementById("who");
+  who.textContent = describe();
+  who.classList.toggle("long", who.textContent.length > 90);
   try{
     const size = await get("/population/size", fp);
     const per = await Promise.all(DIMS.map(d=>get("/population/breakdown", {...fp, by:[d.by||d.key]})));

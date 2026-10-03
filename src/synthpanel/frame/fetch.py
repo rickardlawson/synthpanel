@@ -66,11 +66,170 @@ def fetch_centrality():
     )[["kommune", "kommune_navn", "sentralitet", "sentralitet_tekst"]]
 
 
+# --- L0b -------------------------------------------------------------------
+EDU_ALL = ["00", "1-2", "3-5a", "11", "6", "7-8", "9"]
+INNV = ["B", "C", "Rest"]
+
+
+def fetch_edu_by_immigrant_age():
+    """Utdanning × innvandringskategori × alder × kjønn (hele landet)."""
+    return ssb.get_table("09599", [
+        {"variableCode": "UtdanNivaa", "valueCodes": EDU_ALL},
+        {"variableCode": "Kjonn", "valueCodes": ["1", "2"]},
+        {"variableCode": "InnvandrKat", "valueCodes": INNV},
+        {"variableCode": "Alder", "valueCodes": ["16-19", "20-24", "25-29", "30-34", "35-39",
+                                                  "40-49", "50-59", "60-66", "067+"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["InnvNo"]},
+        LATEST,
+    ])
+
+
+def fetch_edu_by_immigrant_fylke():
+    """Utdanning × innvandringskategori × kjønn per fylke."""
+    return ssb.get_table("12934", [
+        {"variableCode": "Region", "valueCodes": ["*"]},
+        {"variableCode": "UtdanNivaa", "valueCodes": EDU_ALL},
+        {"variableCode": "InnvandrKat", "valueCodes": INNV},
+        {"variableCode": "Kjonn", "valueCodes": ["1", "2"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["InnvNo"]},
+        LATEST,
+    ])
+
+
+EDU4 = ["1-2", "3-5", "6-8", "0_9"]
+
+
+def fetch_labour_status():
+    """Prioritert arbeidsstyrkestatus × kjønn × alder × utdanning × innvandrer (hele landet).
+    12424: 15–19, 20–24, 25–29 · 12425: 30–54, 55–61 · 12426: 62–66, 67+.
+    Alle statuskoder hentes; byggesteget plukker ut de gjensidig utelukkende."""
+    import pandas as pd
+
+    common = [
+        {"variableCode": "Kjonn", "valueCodes": ["1", "2"]},
+        {"variableCode": "UtdNivaa", "valueCodes": EDU4},
+        {"variableCode": "InnvandrKat", "valueCodes": ["A_C-G", "B"]},
+        {"variableCode": "HovArbStyrkStatus", "valueCodes": ["*"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["Bosatte"]},
+        LATEST,
+    ]
+    parts = []
+    for table, ages in [("12424", ["15-19", "20-24", "25-29"]),
+                        ("12425", ["30-54", "55-61"]),
+                        ("12426", ["62-66", "67+"])]:
+        df = ssb.get_table(table, common + [{"variableCode": "Alder", "valueCodes": ages}])
+        parts.append(df.assign(tabell=table))
+    return pd.concat(parts, ignore_index=True)
+
+
+def fetch_activity_by_fylke():
+    """Andel i arbeid/utdanning/tiltak per fylke × kjønn × alder (13678)."""
+    return ssb.get_table("13678", [
+        {"variableCode": "Region", "valueCodes": ["*"]},
+        {"variableCode": "HovArbStyrkStatus", "valueCodes": ["TOT", "A.01xU.01xU.03"]},
+        {"variableCode": "Alder", "valueCodes": ["15-19", "20-24", "25-29", "30-39", "40-49", "50-61", "62+"]},
+        {"variableCode": "UtdNivaa", "valueCodes": ["0"]},
+        {"variableCode": "Kjonn", "valueCodes": ["1", "2"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["Bosatte"]},
+        LATEST,
+    ])
+
+
+def fetch_household_persons():
+    """Personer etter kjønn, alder og husholdningstype (hele landet, 06071)."""
+    return ssb.get_table("06071", [
+        {"variableCode": "Kjonn", "valueCodes": ["1", "2"]},
+        {"variableCode": "Alder", "valueCodes": ["00-15", "16-29", "30-66", "067+"]},
+        {"variableCode": "HusholdType", "valueCodes": ["*"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["Personer"]},
+        LATEST,
+    ])
+
+
+def fetch_family_kids_by_age():
+    """Andel voksne i familier med små barn / store barn / uten barn, per kjønn og alder (12836)."""
+    return ssb.get_table("12836", [
+        {"variableCode": "Kjonn", "valueCodes": ["1", "2"]},
+        {"variableCode": "Alder", "valueCodes": ["25-44", "45-61"]},
+        {"variableCode": "InnvandrKat", "valueCodes": ["A-G"]},
+        {"variableCode": "AntHjemBarnU18", "valueCodes": ["TO"]},
+        {"variableCode": "FamilieType", "valueCodes": ["2.1+2.3", "2.2+2.4", "3.1+3.2+3.3"]},
+        {"variableCode": "HovArbStyrkStatus", "valueCodes": ["TOT"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["Bosatte"]},
+        LATEST,
+    ])
+
+
+def fetch_employment_by_age():
+    """Sysselsatte i prosent av befolkningen per ettårig alder og kjønn, hele landet (06161)."""
+    return ssb.get_table("06161", [
+        {"variableCode": "Region", "valueCodes": ["0"]},
+        {"variableCode": "Kjonn", "valueCodes": ["1", "2"]},
+        {"variableCode": "Alder", "valueCodes": ["*"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["Sysselsatte"]},
+        LATEST,
+    ])
+
+
+def fetch_low_income_groups():
+    """Andel med lavinntekt (EU-skala 60 %) for ulike grupper, inkl. studenthusholdninger (12599)."""
+    return ssb.get_table("12599", [
+        {"variableCode": "Forbruksenhet", "valueCodes": ["*"]},
+        {"variableCode": "Populasjon", "valueCodes": ["93a"]},
+        {"variableCode": "HovedInntYrkesinn", "valueCodes": ["Total"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["EUskala60", "AntPersoner"]},
+        LATEST,
+    ])
+
+
+def fetch_low_income_education():
+    """Vedvarende lavinntekt (EU-60) for 18–66 år etter utdanningsnivå, treårsperiode (09570)."""
+    return ssb.get_table("09570", [
+        {"variableCode": "UtdNivaa", "valueCodes": ["*"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["EUskalaSeksti"]},
+        LATEST,
+    ])
+
+
+def fetch_household_fylke():
+    """Personer i privathusholdninger etter husholdningstype per fylke (10986)."""
+    return ssb.get_table("10986", [
+        {"variableCode": "Region", "valueCodes": ["*"]},
+        {"variableCode": "HushType", "valueCodes": ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7",
+                                                     "2.1", "2.2", "2.3"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["Personer"]},
+        LATEST,
+    ])
+
+
+def fetch_income_deciles():
+    """Husholdninger etter inntekt etter skatt i nasjonale desiler, per husholdningstype og fylke (12563)."""
+    return ssb.get_table("12563", [
+        {"variableCode": "Region", "valueCodes": ["*"]},
+        {"variableCode": "InntektSkatt", "valueCodes": ["00S"]},
+        {"variableCode": "Desiler", "valueCodes": ["*"]},
+        {"variableCode": "HushType", "valueCodes": ["*"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["Prosent"]},
+        LATEST,
+    ])
+
+
 JOBS = {
     "population_07459": fetch_population,
     "education_08921": fetch_education,
     "background_07111": fetch_background,
     "centrality_klass128": fetch_centrality,
+    "edu_immigrant_age_09599": fetch_edu_by_immigrant_age,
+    "edu_immigrant_fylke_12934": fetch_edu_by_immigrant_fylke,
+    "labour_status_1242x": fetch_labour_status,
+    "activity_fylke_13678": fetch_activity_by_fylke,
+    "household_persons_06071": fetch_household_persons,
+    "household_fylke_10986": fetch_household_fylke,
+    "family_kids_age_12836": fetch_family_kids_by_age,
+    "employment_age_06161": fetch_employment_by_age,
+    "low_income_groups_12599": fetch_low_income_groups,
+    "low_income_education_09570": fetch_low_income_education,
+    "income_deciles_12563": fetch_income_deciles,
 }
 
 

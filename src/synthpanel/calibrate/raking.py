@@ -84,6 +84,16 @@ def rake(
         max_err = max(errors.values())
         if max_err < tol:
             break
+    # Siste marginal (normalt geografi) justeres en siste gang uten vektgrenser,
+    # slik at den alltid treffes eksakt selv om grensene har klippet underveis.
+    codes, tgt, k = groups[-1]
+    current = np.bincount(codes, weights=w, minlength=k)
+    w *= np.divide(tgt, current, out=np.ones_like(tgt), where=current > 0)[codes]
+    for (codes, tgt, k), key in zip(groups, margins):
+        current = np.bincount(codes, weights=w, minlength=k)
+        errors[str(key)] = float(0.5 * np.abs(current - tgt).sum() / tgt.sum())
+    max_err = max(errors.values())
+
     return RakeResult(weights=w, iterations=it, max_misallocated=max_err,
                       converged=max_err < tol, dropped_share=dropped,
                       misallocated=errors)

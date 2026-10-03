@@ -6,9 +6,10 @@ på offisiell statistikk. Målet er et prediksjonsverktøy som kan svare på
 budskap eller en debatt – og hvor store, hvor bosatte og hvor viktige
 segmentene er.
 
-> Status: **v0.1 – L0 befolkningsramme ferdig.** 50 751 syntetiske agenter som
+> Status: **v0.2 – L0 befolkningsramme ferdig.** 50 751 syntetiske agenter som
 > til sammen gjenskaper SSB-tallene for kjønn, alder, kommune, sentralitet,
-> utdanning og landbakgrunn. Scenariomotoren (L4) har definert kontrakt, men er
+> utdanning, landbakgrunn, innvandringskategori, hovedstatus, husholdningstype,
+> lavinntekt og husholdningsinntekt. Scenariomotoren (L4) har definert kontrakt, men er
 > ikke bygget ennå. Se [docs/architecture.md](docs/architecture.md).
 
 ## Kom i gang
@@ -21,8 +22,8 @@ docker compose up -d --build      # første oppstart henter SSB-data og bygger (
 curl localhost:8090/health
 ```
 
-Befolkningsutforsker: `http://localhost:8090/` – velg kjønn, alder, fylke,
-sentralitet, utdanning og landbakgrunn, og se hvor stort segmentet er og hvordan
+Befolkningsutforsker: `http://localhost:8090/` – velg blant elleve dimensjoner
+(kjønn, alder, fylke, sentralitet, utdanning, bakgrunn, status, husholdning, inntekt …) og se hvor stort segmentet er og hvordan
 det skiller seg fra resten av befolkningen.
 
 API-dokumentasjon med «Try it out»: `http://localhost:8090/docs`
@@ -83,7 +84,6 @@ noe må skrives om. Port 8090 for å ikke kollidere med Signalist på 8080.
 
 ## Datakilder
 
-Kun åpne data i v0.1: SSB-tabell 07459 (befolkning 1.1.2026), 08921
-(utdanningsnivå 2025), 07111 (innvandrere og norskfødte med innvandrerforeldre
-1.1.2026) og Klass 128 (sentralitet). Se `GET /meta` for nøyaktige perioder og
+Kun åpne data fra SSB: 16 tabeller pluss Klass 128 (sentralitet). Oversikt over
+hvilken tabell som brukes til hva står i [docs/architecture.md](docs/architecture.md). Se `GET /meta` for nøyaktige perioder og
 hentetidspunkt.

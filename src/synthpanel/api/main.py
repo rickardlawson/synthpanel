@@ -40,7 +40,33 @@ DIMENSIONS = {
     "sentralitet": "SSB sentralitetsklasse 01 (mest sentral) – 06",
     "utdanning": "Høyeste fullførte utdanning",
     "bakgrunn": "Egen/foreldres landbakgrunn (verdensdel) eller norsk",
+    "innvkat": "Innvandringskategori: innvandrer, norskfødt med innvandrerforeldre, øvrige",
+    "arbeidsstatus": "Hovedstatus: sysselsatt, student, pensjonist, aap_ufor, arbeidsledig, tiltak, annet",
+    "husholdning": "Husholdningstype personen bor i",
+    "lavinntekt": "Bor i husholdning med lavinntekt (EU-skala 60 %): ja/nei",
+    "inntektsdesil": "Husholdningens inntekt etter skatt, nasjonal desil 1 (lavest) – 10 (høyest)",
 }
+
+
+class Filters(BaseModel):
+    """Filtre kan gjentas, f.eks. ?fylke=03&fylke=32. Innen ett filter betyr flere verdier «eller»."""
+    kjonn: list[str] = []
+    aldersband: list[str] = []
+    fylke: list[str] = []
+    kommune: list[str] = []
+    sentralitet: list[str] = []
+    utdanning: list[str] = []
+    bakgrunn: list[str] = []
+    innvkat: list[str] = []
+    arbeidsstatus: list[str] = []
+    husholdning: list[str] = []
+    lavinntekt: list[str] = []
+    inntektsdesil: list[str] = []
+
+
+class BreakdownParams(Filters):
+    by: list[str] = Field(["kjonn"], description="Én eller to dimensjoner å gruppere på")
+    limit: int = 500
 
 
 @lru_cache
@@ -59,23 +85,14 @@ def _con() -> duckdb.DuckDBPyConnection:
     return _db().cursor()
 
 
-def _where(filters: dict[str, list[str] | None]) -> tuple[str, list]:
+def _where(f: Filters) -> tuple[str, list]:
     clauses, params = [], []
-    for col, values in filters.items():
+    for col, values in f.model_dump(include=set(Filters.model_fields)).items():
         if values:
-            clauses.append(f"{col} IN ({', '.join('?' for _ in values)})")
+            assert col in DIMENSIONS  # kolonnenavn kommer fra modellen, aldri fra bruker
+            clauses.append(f"CAST({col} AS VARCHAR) IN ({', '.join('?' for _ in values)})")
             params.extend(values)
     return ("WHERE " + " AND ".join(clauses)) if clauses else "", params
-
-
-Filter = Annotated[list[str] | None, Query()]
-
-
-def _filters(kjonn, aldersband, fylke, kommune, sentralitet, utdanning, bakgrunn) -> dict:
-    return {
-        "kjonn": kjonn, "aldersband": aldersband, "fylke": fylke, "kommune": kommune,
-        "sentralitet": sentralitet, "utdanning": utdanning, "bakgrunn": bakgrunn,
-    }
 
 
 @app.get("/health")
@@ -104,12 +121,9 @@ def lookups(dimension: str):
 
 
 @app.get("/population/size")
-def size(
-    kjonn: Filter = None, aldersband: Filter = None, fylke: Filter = None, kommune: Filter = None,
-    sentralitet: Filter = None, utdanning: Filter = None, bakgrunn: Filter = None,
-):
-    """Hvor mange voksne passer beskrivelsen? Filtre kan gjentas (?fylke=03&fylke=32)."""
-    where, params = _where(_filters(kjonn, aldersband, fylke, kommune, sentralitet, utdanning, bakgrunn))
+def size(f: Annotated[Filters, Query()]):
+    """Hvor mange voksne passer beskrivelsen?"""
+    where, params = _where(f)
     con = _con()
     total = con.execute("SELECT SUM(vekt) FROM agents").fetchone()[0]
     persons, n = con.execute(f"SELECT COALESCE(SUM(vekt),0), COUNT(*) FROM agents {where}", params).fetchone()
@@ -122,17 +136,13 @@ def size(
 
 
 @app.get("/population/breakdown")
-def breakdown(
-    by: Annotated[list[str], Query(description="Én eller to dimensjoner å gruppere på")],
-    kjonn: Filter = None, aldersband: Filter = None, fylke: Filter = None, kommune: Filter = None,
-    sentralitet: Filter = None, utdanning: Filter = None, bakgrunn: Filter = None,
-    limit: int = 500,
-):
+def breakdown(f: Annotated[BreakdownParams, Query()]):
     """Fordeling av (filtrert) befolkning etter én eller to dimensjoner."""
+    by, limit = f.by, f.limit
     bad = [b for b in by if b not in DIMENSIONS]
     if bad or not 1 <= len(by) <= 2:
         raise HTTPException(422, f"`by` må være 1–2 av {sorted(DIMENSIONS)}")
-    where, params = _where(_filters(kjonn, aldersband, fylke, kommune, sentralitet, utdanning, bakgrunn))
+    where, params = _where(f)
     cols = ", ".join(by)
     rows = _con().execute(
         f"""

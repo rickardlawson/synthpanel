@@ -10,7 +10,7 @@ verdifulle er ofte **gapet** mellom de to.
 
 | Lag | Innhold | Kilder | Status |
 |---|---|---|---|
-| **L0 Befolkningsramme** | Kjønn, alder, kommune, fylke, sentralitet, utdanning, landbakgrunn. Neste: inntekt, husholdning, yrke, livsfase | SSB | ✅ v0.1 |
+| **L0 Befolkningsramme** | Kjønn, alder, kommune, fylke, sentralitet, utdanning, landbakgrunn, innvandringskategori, hovedstatus (arbeid/studier/pensjon/trygd), husholdningstype, lavinntekt, inntektsdesil. Neste: yrke/næring, bolig | SSB | ✅ v0.2 |
 | **L1 Fasitbibliotek – atferd** | Valgresultater, mediebruk, forbruk, dagligvare, kjente meningsmålinger. Lagres som *fordelinger med metadata* (kilde, år, spørsmål, populasjon, usikkerhet) | SSB, Valgundersøkelsen, Medietilsynet, publiserte målinger | ⏳ |
 | **L2 Verdilag** | Tillit, frivillighet/dugnad, tro, Schwartz-verdier, politisk engasjement | ESS, Norsk medborgerpanel, WVS (ev. Norsk Monitor på lisens) | ⏳ |
 | **L3 Arketyper (8–12)** | Utledes statistisk fra L2 (latent klasseanalyse), navngis etterpå. Koblet til L0 → størrelse, geografi, kjøpekraft | Avledet | ⏳ |
@@ -36,27 +36,47 @@ verdifulle er ofte **gapet** mellom de to.
 
 ## L0 – hvordan populasjonen bygges
 
-1. Eksakte antall per kommune × kjønn × ettårig alder (07459).
-2. Utdanningsandeler (08921) og landbakgrunn (07111) per fylke × kjønn ×
-   aldersgruppe knyttes til hver ettårig alder → forventede marginaler.
-3. Agenter fordeles på celler kommune × kjønn × aldersbånd (minst én per
-   celle) og får trukket alder, utdanning og bakgrunn.
-4. **Raking** justerer vektene til seks marginaler samtidig. Siste marginal
-   (kommune × kjønn × aldersbånd) treffes eksakt; de øvrige ligger under
-   0,02 % feilplassert befolkning. Effektiv utvalgsstørrelse ≈ 49 400 av 50 751.
+Egenskapene trekkes i en rekkefølge der hver kan avhenge av de forrige, og
+vektene kalibreres (raking) mot 15 marginaler fra SSB i to pass.
 
-### Kjente svakheter i v0.1
+| Egenskap | Trekkes betinget på | Kilde | Kalibreres mot |
+|---|---|---|---|
+| Kommune, kjønn, alder | – | 07459 (1.1.2026) | kommune × kjønn × aldersbånd (eksakt), kjønn × ettårig alder |
+| Landbakgrunn | fylke, kjønn, alder | 07111 | fylke × kjønn, kjønn × alder |
+| Innvandringskategori | kjønn, alder (blant utenlandsk bakgrunn) | 09599 | via utdanningsmarginal |
+| Utdanning | fylke, kjønn, alder, innvandringskategori | 08921, 09599 | fylke × kjønn; kjønn × alder × innvkat; innvandrere per fylke (12934) |
+| Hovedstatus | kjønn, alder, utdanning, innvandrer; 62+ justert per ettårig alder | 12424–12426, 06161 | kjønn × alder × status; sysselsatt per ettårig alder 62–74 og 75+; aktiv per fylke (13678) |
+| Husholdningstype | fylke, kjønn, alder | 06071, 12836, 10986 | kjønn × alder (18–29, 30–44, 45–61, 62–66, 67+) |
+| Lavinntekt (EU-60) | husholdning, status, innvandring, utdanning | 12599, 09570 | hver av gruppene |
+| Inntektsdesil | fylke, husholdningstype, lavinntekt | 12563 | – (trekkes etter kalibrering) |
 
-- **Utdanning og landbakgrunn antas uavhengige** gitt fylke/kjønn/alder. Det
-  stemmer dårlig (innvandrere har mer todelt utdanningsfordeling). Fikses ved
-  å rake mot en nasjonal tabell utdanning × innvandringskategori.
-- **Innvandrere og norskfødte med innvandrerforeldre er slått sammen** (07111).
-- **Utdanning for 18–19 år** bruker andelene for 16–19 år; **67–79 og 80+**
-  deler andelene for 67+.
-- **Utdanning er fra 2025**, befolkning fra 1.1.2026.
-- Ingen inntekt, husholdning eller yrke ennå.
-- Svært små kommuner har 1–2 agenter per celle – kommunetall er riktige,
-  men kombinasjoner på kommunenivå er lite presise (vises som `presisjon: lav`).
+Resultat v0.2: 50 751 agenter, effektiv utvalgsstørrelse ≈ 45 500. Kommunetall
+er eksakte. Alle marginaler ligger under 0,2 % feilplassert befolkning, unntatt
+de to utdanningsmarginalene for innvandrere (≈ 0,45 %), der kildene er uenige.
+
+**Uavhengig kontroll:** innvandreres utdanning etter kjønn per fylke (12934) er
+ikke brukt i kalibreringen. Snittavvik i andel med høyere utdanning: 1,5
+prosentpoeng; under 3 pp for alle grupper med minst 300 agenter.
+
+### Kjente svakheter i v0.2
+
+- **Inntektsdesil er husholdningens inntekt, ikke personens,** og fordelingen
+  per husholdningstype gjelder husholdninger, ikke personer. Par uten barn
+  plasseres etter egen alder (SSB bruker eldste person).
+- **Inntekt henger sammen med utdanning og status bare via lavinntekt.**
+  SSB publiserer ikke desiler etter utdanning. Over lavinntektsgrensen er desil
+  uavhengig av utdanning gitt husholdningstype og fylke.
+- **Lavinntekt etter utdanning** bygger på *vedvarende* lavinntekt (09570),
+  skalert til årlig nivå.
+- **Europa-bakgrunn ≈ «EU/EØS m.fl.» i lavinntektsgruppene.** Innvandrere fra
+  Europa utenfor EU/EØS (f.eks. Ukraina) havner dermed i feil lavinntektsgruppe.
+- **Husholdning 18–29 år** er en samlet gruppe: 18-åringer og 29-åringer har
+  samme sannsynlighet for å bo med foreldre.
+- **Sysselsetting 75+** er utledet som rest (12426 minus 06161 for 67–74).
+- **Innvandrere og norskfødte** skilles bare med nasjonale andeler per alder.
+- **Små fylker og kommuner** har få agenter i smale grupper – svarene merkes
+  `presisjon: moderat/lav`.
+- Utdanning, status og inntekt er fra 2024/2025; befolkning fra 1.1.2026.
 
 ## Kobling til Signalist (senere)
 
@@ -85,9 +105,9 @@ Opoint-data avtales eksplisitt før kobling.
 
 ## Veikart
 
-1. ✅ L0 befolkningsramme + API
-2. Testsett: 30–50 spørsmål med norske svar per undergruppe (Medborgerpanelet, ESS)
-3. L0b: inntekt, husholdning, livsfase; fiks utdanning × bakgrunn
+1. ✅ L0 befolkningsramme + API + utforsker
+2. ✅ L0b: innvandringskategori, hovedstatus, husholdning, lavinntekt, inntekt
+3. Testsett: 30–50 spørsmål med norske svar per undergruppe (Medborgerpanelet, ESS)
 4. L2 verdilag og L3 arketyper v0
 5. L4 første scenario ende-til-ende (Tine), målt mot testsettet
 6. L5 kobling til Signalist

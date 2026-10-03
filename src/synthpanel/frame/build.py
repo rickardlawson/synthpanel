@@ -24,6 +24,7 @@ import pandas as pd
 
 from synthpanel import config
 from synthpanel.calibrate.raking import effective_sample_size, rake
+from synthpanel.frame import enrich
 
 EDU_BANDS = [(16, 19, "16-19"), (20, 24, "20-24"), (25, 29, "25-29"), (30, 39, "30-39"),
              (40, 49, "40-49"), (50, 59, "50-59"), (60, 66, "60-66"), (67, 200, "067+")]
@@ -102,16 +103,6 @@ def build() -> dict:
     exp_bg = pop.merge(bg, on=["fylke", "kjonn", "bg_band"])
     exp_bg["n"] = exp_bg["personer"] * exp_bg["andel"]
 
-    # Rekkefølgen betyr noe: siste marginal treffes eksakt (geografi × kjønn × alder).
-    margins = {
-        ("kjonn", "aldersband", "utdanning"): exp_edu.groupby(["kjonn", "aldersband", "utdanning"])["n"].sum(),
-        ("kjonn", "aldersband", "bakgrunn"): exp_bg.groupby(["kjonn", "aldersband", "bakgrunn"])["n"].sum(),
-        ("fylke", "kjonn", "utdanning"): exp_edu.groupby(["fylke", "kjonn", "utdanning"])["n"].sum(),
-        ("fylke", "kjonn", "bakgrunn"): exp_bg.groupby(["fylke", "kjonn", "bakgrunn"])["n"].sum(),
-        ("kjonn", "alder"): pop.groupby(["kjonn", "alder"])["personer"].sum(),
-        ("kommune", "kjonn", "aldersband"): pop.groupby(["kommune", "kjonn", "aldersband"])["personer"].sum(),
-    }
-
     # --- Fordel agenter på celler ---
     cells = pop.groupby(["kommune", "kjonn", "aldersband"], as_index=False)["personer"].sum()
     total = cells["personer"].sum()
@@ -137,26 +128,63 @@ def build() -> dict:
     a["edu_band"] = _band(a["alder"], EDU_BANDS)
     a["bg_band"] = _band(a["alder"], BG_BANDS)
 
-    # Trekk utdanning og bakgrunn fra betingede fordelinger
+    # Trekk egenskaper i en rekkefølge der hver kan avhenge av de forrige:
+    # bakgrunn -> innvandringskategori -> utdanning -> arbeidsstatus -> husholdning -> inntekt
     def draw(attr_df: pd.DataFrame, keys: list[str], col: str) -> pd.Series:
-        out = pd.Series(index=a.index, dtype="object")
-        indexed = attr_df.set_index(keys).sort_index()
-        for key, idx in a.groupby(keys).groups.items():
-            dist = indexed.loc[key]
-            p = dist["andel"].to_numpy(dtype=float)
-            out.loc[idx] = rng.choice(dist[col].to_numpy(), size=len(idx), p=p / p.sum())
-        return out
+        return enrich.draw_categorical(a, attr_df.rename(columns={"andel": "p"}), keys, col, rng)
 
-    a["utdanning"] = draw(edu, ["fylke", "kjonn", "edu_band"], "utdanning")
     a["bakgrunn"] = draw(bg, ["fylke", "kjonn", "bg_band"], "bakgrunn")
+    a["b09599"] = enrich.band(a["alder"], enrich.BANDS_09599)
+    a["innvkat"] = enrich.draw_innvkat(a, rng)
+    a["utdanning"] = enrich.draw_education(a, edu, rng)
+    a["b_status"] = enrich.band(a["alder"], enrich.BANDS_STATUS)
+    a["arbeidsstatus"] = enrich.draw_labour(a, rng)
+    a["arbeidsstatus"] = enrich.adjust_elderly_employment(a, pop, rng)
+    a["b_emp"], a["syss"] = enrich.emp_keys(a)
+    a["aktiv"] = np.where(a["arbeidsstatus"].isin(enrich.AKTIV), "ja", "nei")
+    a["innv_utd"] = enrich.innv_utd_key(a)
+    a["hh_band"] = enrich.band(a["alder"], enrich.BANDS_HH)
+    a["husholdning"] = enrich.collapse_household(enrich.draw_household(a, pop_all, rng))
+    a = a.join(enrich.lowinc_groups(a))
+    a["lavinntekt"] = enrich.draw_lowinc(a, rng)
+
+    # --- Forventede marginaler (fasit fra SSB) ---
+    # Rekkefølgen betyr noe: siste marginal treffes eksakt (geografi × kjønn × alder).
+    exp_edu = pop.merge(edu, on=["fylke", "kjonn", "edu_band"])
+    exp_edu["n"] = exp_edu["personer"] * exp_edu["andel"]
+    exp_bg = pop.merge(bg, on=["fylke", "kjonn", "bg_band"])
+    exp_bg["n"] = exp_bg["personer"] * exp_bg["andel"]
+    margins = {
+        ("kjonn", "b09599", "innvkat", "utdanning"): enrich.edu_immigrant_margin(exp_bg),
+        ("kjonn", "aldersband", "bakgrunn"): exp_bg.groupby(["kjonn", "aldersband", "bakgrunn"])["n"].sum(),
+        ("kjonn", "b_status", "arbeidsstatus"): enrich.labour_margin(pop),
+        ("kjonn", "b_emp", "syss"): enrich.employment_age_margin(pop),
+        ("kjonn", "hh_band", "husholdning"): enrich.household_margin(pop, pop_all),
+        ("fylke", "kjonn", "aktiv"): enrich.activity_margin(pop),
+        ("fylke", "innv_utd"): enrich.immigrant_edu_fylke_margin(exp_bg),
+        ("fylke", "kjonn", "utdanning"): exp_edu.groupby(["fylke", "kjonn", "utdanning"])["n"].sum(),
+        ("fylke", "kjonn", "bakgrunn"): exp_bg.groupby(["fylke", "kjonn", "bakgrunn"])["n"].sum(),
+        ("kjonn", "alder"): pop.groupby(["kjonn", "alder"])["personer"].sum(),
+        ("kommune", "kjonn", "aldersband"): pop.groupby(["kommune", "kjonn", "aldersband"])["personer"].sum(),
+    }
 
     # Basisvekt: celle-folketall / antall agenter i cellen
     cell_pop = cells.set_index(["kommune", "kjonn", "aldersband"])["personer"]
     key = pd.MultiIndex.from_frame(a[["kommune", "kjonn", "aldersband"]])
     base = cell_pop.reindex(key).to_numpy() / n_lookup.reindex(key).to_numpy()
 
-    res = rake(a, margins, base_weights=base, bounds=(0.1, 10.0), max_iter=500, tol=2e-4)
+    # Pass 1: kalibrer alt unntatt lavinntekt.
+    res = rake(a, margins, base_weights=base, bounds=(0.1, 10.0), max_iter=500, tol=5e-3)
+    # Pass 2: gruppestørrelsene for lavinntekt hentes fra pass 1, og lavinntekt
+    # legges inn før geografien (som fortsatt kalibreres sist og treffes eksakt).
+    w1 = pd.Series(res.weights, index=a.index)
+    sizes = {dim: w1.groupby(a[dim]).sum() for dim in ["lav_hh", "lav_status", "lav_innv", "lav_edu"]}
+    lav = enrich.lowinc_margins(a, sizes, float(w1.sum()))
+    geo_key = ("kommune", "kjonn", "aldersband")
+    margins2 = {k: v for k, v in margins.items() if k != geo_key} | lav | {geo_key: margins[geo_key]}
+    res = rake(a, margins2, base_weights=base, bounds=(0.1, 10.0), max_iter=500, tol=5e-3)  # kildene er uenige på 0,1–0,5 %; se docs/architecture.md
     a["vekt"] = res.weights
+    a["inntektsdesil"] = enrich.draw_income(a.assign(_w=a["vekt"]), rng)
 
     # Beriking
     a = a.merge(centr[["kommune", "kommune_navn", "sentralitet"]], on="kommune", how="left")
@@ -164,7 +192,8 @@ def build() -> dict:
     a["kjonn"] = a["kjonn"].map({"1": "mann", "2": "kvinne"})
     a.insert(0, "agent_id", [f"NO-{i:06d}" for i in range(len(a))])
     a = a[["agent_id", "kommune", "kommune_navn", "fylke", "fylke_navn", "sentralitet",
-           "kjonn", "alder", "aldersband", "utdanning", "bakgrunn", "vekt"]]
+           "kjonn", "alder", "aldersband", "utdanning", "bakgrunn", "innvkat",
+           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "vekt"]]
 
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     a.to_parquet(config.PROCESSED_DIR / "agents.parquet", index=False)
