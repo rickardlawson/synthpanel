@@ -1,0 +1,55 @@
+# L0 – Befolkningsramme
+# Alle tall hentes fra SSB. Kjør `python -m synthpanel.frame.fetch` for å oppdatere.
+
+population:
+  min_age: 18            # panelet dekker voksne 18+
+  n_agents: 50000        # antall syntetiske agenter som trekkes
+  seed: 20261003
+
+# Aldersbånd brukt i panelet (inklusive grenser). 80 = 80 år og eldre.
+age_bands:
+  - [18, 19]
+  - [20, 24]
+  - [25, 29]
+  - [30, 39]
+  - [40, 49]
+  - [50, 59]
+  - [60, 66]
+  - [67, 79]
+  - [80, 120]
+
+sources:
+  population:
+    table: "07459"
+    title: "Alders- og kjønnsfordeling i kommuner, fylker og hele landets befolkning"
+    level: kommune
+  education:
+    table: "08921"
+    title: "Utdanningsnivå, etter fylke, alder og kjønn"
+    level: fylke
+  immigrant_background:
+    table: "07111"
+    title: "Innvandrere og norskfødte med innvandrerforeldre etter kjønn, alder og landbakgrunn (verdensdel)"
+    level: fylke
+  centrality:
+    klass_source: 131     # Standard for kommuneinndeling
+    klass_target: 128     # Standard for sentralitet
+    date: "2024-01-01"    # siste versjon med publisert korrespondanse
+
+education_labels:
+  "01": grunnskole
+  "02a": videregaende
+  "11": fagskole
+  "03a": uh_kort
+  "04a": uh_lang
+  "09a": uoppgitt
+
+background_labels:          # landbakgrunn (verdensdel) i 07111
+  "1": europa
+  "2": afrika
+  "3": asia
+  "4": annet
+  "5": annet
+  "6": annet
+  "8": annet
+  "9": annet

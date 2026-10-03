@@ -1,0 +1,10 @@
+services:
+  synthpanel:
+    build: .
+    container_name: synthpanel
+    restart: unless-stopped
+    ports:
+      # Kun localhost som standard. Åpne bevisst (f.eks. bak nginx med auth).
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - ./data:/app/data
