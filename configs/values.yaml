@@ -1,0 +1,29 @@
+# L2 – Verdilag fra European Social Survey (ESS), norske respondenter.
+# Data hentes via ESS API. Krever miljøvariabelen ESS_USER_ID
+# (finnes på https://ess.sikt.no/en/api når du er innlogget).
+
+ess:
+  doi_prefix: "10.21338"
+  rounds:            # runde: (DOI for integrert datafil, vekt i donorvalg – nyere runder foretrekkes)
+    9:  {doi: "ess9e03_2",  recency: 0.6}
+    10: {doi: "ess10e03_2", recency: 0.8}
+    11: {doi: "ess11e04_0", recency: 1.0}
+
+matching:
+  k: 15              # antall nærmeste donorer det trekkes blant
+  seed: 20261003
+  weights:           # vekt per avstandskomponent
+    kjonn: 2.0
+    alder_per_10ar: 1.0
+    utdanning_per_niva: 1.0
+    inntekt_per_3_desiler: 0.5
+    region: 0.75
+    innvandring: 1.5
+    status: 1.0
+    bosted: 0.5
+    alene: 0.5
+
+validation:
+  holdout_round: 11
+  holdout_share: 0.3
+  min_group_n: 30

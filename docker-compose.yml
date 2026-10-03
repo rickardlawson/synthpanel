@@ -6,5 +6,8 @@ services:
     ports:
       # Kun localhost som standard. Åpne bevisst (f.eks. bak nginx med auth).
       - "127.0.0.1:8090:8090"
+    env_file:
+      - path: .env          # ESS_USER_ID for verdilaget (valgfri)
+        required: false
     volumes:
       - ./data:/app/data

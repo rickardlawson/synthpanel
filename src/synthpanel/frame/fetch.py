@@ -191,6 +191,44 @@ def fetch_low_income_education():
     ])
 
 
+FYLKER_2024 = ["0", "03", "11", "15", "18", "31", "32", "33", "34", "39", "40", "42", "46", "50", "55", "56"]
+
+
+def fetch_housing_by_household():
+    """Husholdninger etter eierstatus × husholdningstype × bygningstype per fylke (14901)."""
+    return ssb.get_table("14901", [
+        {"variableCode": "Region", "valueCodes": FYLKER_2024},
+        {"variableCode": "EierStatus", "valueCodes": ["1", "2", "3"]},
+        {"variableCode": "HusholdType", "valueCodes": ["*"]},
+        {"variableCode": "BygnType", "valueCodes": ["11", "12", "13", "14b", "19"]},
+        {"variableCode": "ContentsCode", "valueCodes": ["Husholdning"]},
+        LATEST,
+    ])
+
+
+def fetch_housing_by_income():
+    """Eierstatus (14900) og bygningstype (14921) etter inntektskvartil per fylke."""
+    import pandas as pd
+
+    groups = ["0", "41", "42", "43", "44"]
+    own = ssb.get_table("14900", [
+        {"variableCode": "Region", "valueCodes": FYLKER_2024},
+        {"variableCode": "EierStatus", "valueCodes": ["1", "2", "3"]},
+        {"variableCode": "Inntekstgruppe", "valueCodes": groups},
+        {"variableCode": "ContentsCode", "valueCodes": ["Husholdning"]},
+        LATEST,
+    ]).assign(dim="eierstatus").rename(columns={"EierStatus": "kode"})
+    bld = ssb.get_table("14921", [
+        {"variableCode": "Region", "valueCodes": FYLKER_2024},
+        {"variableCode": "BygnType", "valueCodes": ["11", "12", "13", "14b", "19"]},
+        {"variableCode": "Inntekstgruppe", "valueCodes": groups},
+        {"variableCode": "ContentsCode", "valueCodes": ["Husholdning"]},
+        LATEST,
+    ]).assign(dim="boligtype").rename(columns={"BygnType": "kode"})
+    cols = ["Region", "Inntekstgruppe", "dim", "kode", "value", "Tid"]
+    return pd.concat([own[cols], bld[cols]], ignore_index=True)
+
+
 def fetch_household_fylke():
     """Personer i privathusholdninger etter husholdningstype per fylke (10986)."""
     return ssb.get_table("10986", [
@@ -230,6 +268,8 @@ JOBS = {
     "low_income_groups_12599": fetch_low_income_groups,
     "low_income_education_09570": fetch_low_income_education,
     "income_deciles_12563": fetch_income_deciles,
+    "housing_household_14901": fetch_housing_by_household,
+    "housing_income_14900_14921": fetch_housing_by_income,
 }
 
 

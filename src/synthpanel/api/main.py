@@ -45,6 +45,18 @@ DIMENSIONS = {
     "husholdning": "Husholdningstype personen bor i",
     "lavinntekt": "Bor i husholdning med lavinntekt (EU-skala 60 %): ja/nei",
     "inntektsdesil": "Husholdningens inntekt etter skatt, nasjonal desil 1 (lavest) – 10 (høyest)",
+    "eierstatus": "Selveier, andelseier eller leier (husholdningens bolig)",
+    "boligtype": "Enebolig, tomannsbolig, rekkehus/småhus, blokk, annen",
+    "verdi_apenhet": "Verdier (ESS): åpenhet for endring – selvstendighet, stimulans, nytelse (lav/middels/høy)",
+    "verdi_trygghet": "Verdier (ESS): bevaring – trygghet, regler, tradisjon (lav/middels/høy)",
+    "verdi_selvhevdelse": "Verdier (ESS): selvhevdelse – makt, suksess (lav/middels/høy)",
+    "verdi_fellesskap": "Verdier (ESS): selvoverskridelse – omsorg, likeverd, natur (lav/middels/høy)",
+    "tillit": "Tillit til Storting, rettsvesen, politi og politikere (ESS, lav/middels/høy)",
+    "risikovilje": "«Søker eventyr og tar sjanser» (ESS, lav/middels/høy)",
+    "politisk_sted": "Plassering på venstre–høyre-skala (ESS)",
+    "religiositet": "Hvor religiøs (ESS, lav/middels/høy)",
+    "politisk_interesse": "Interesse for politikk (ESS, høy/lav)",
+    "klimabekymring": "Bekymring for klimaendringer (ESS, lav/middels/høy)",
 }
 
 
@@ -62,6 +74,18 @@ class Filters(BaseModel):
     husholdning: list[str] = []
     lavinntekt: list[str] = []
     inntektsdesil: list[str] = []
+    eierstatus: list[str] = []
+    boligtype: list[str] = []
+    verdi_apenhet: list[str] = []
+    verdi_trygghet: list[str] = []
+    verdi_selvhevdelse: list[str] = []
+    verdi_fellesskap: list[str] = []
+    tillit: list[str] = []
+    risikovilje: list[str] = []
+    politisk_sted: list[str] = []
+    religiositet: list[str] = []
+    politisk_interesse: list[str] = []
+    klimabekymring: list[str] = []
 
 
 class BreakdownParams(Filters):
@@ -105,7 +129,8 @@ def meta():
     """Kilder, perioder og kalibreringsrapport for gjeldende bygg."""
     out = {}
     for name, path in [("sources", config.RAW_DIR / "manifest.json"),
-                       ("build", config.PROCESSED_DIR / "build_report.json")]:
+                       ("build", config.PROCESSED_DIR / "build_report.json"),
+                       ("validation", config.PROCESSED_DIR / "validation_report.json")]:
         if path.exists():
             out[name] = json.loads(path.read_text(encoding="utf-8"))
     return out

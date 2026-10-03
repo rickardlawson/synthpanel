@@ -55,7 +55,10 @@ def test_education_by_fylke_matches_ssb(agents):
 
 
 def test_every_agent_has_complete_profile(agents):
-    assert agents.drop(columns=["vekt"]).notna().all().all()
+    # score_* er kontinuerlige verdimål og kan mangle når donoren ikke svarte;
+    # kategoriene står da som «ukjent».
+    cols = [c for c in agents.columns if not c.startswith("score_")]
+    assert agents[cols].notna().all().all()
 
 
 # --- L0b ---------------------------------------------------------------------
@@ -157,3 +160,46 @@ def test_income_correlates_with_low_income_and_status(agents):
     m = lambda d: (d["inntektsdesil"] * d["vekt"]).sum() / d["vekt"].sum()
     assert m(agents[agents["lavinntekt"] == "ja"]) < 3.5 < m(agents[agents["lavinntekt"] == "nei"])
     assert m(agents[agents["arbeidsstatus"] == "aap_ufor"]) < m(agents[agents["arbeidsstatus"] == "sysselsatt"])
+
+
+# --- Bolig og verdier ------------------------------------------------------------
+
+def test_housing_tenure_by_income_quartile(agents):
+    """Eierstatus per inntektskvartil (omregnet til husholdninger) mot 14900."""
+    from synthpanel.frame import enrich
+    d = pd.read_parquet(config.RAW_DIR / "housing_income_14900_14921.parquet")
+    t = d[(d["Region"] == "0") & (d["dim"] == "eierstatus") & (d["Inntekstgruppe"].isin(["41", "44"]))]
+    t = t.assign(kat=t["kode"].map(enrich.EIER)).pivot_table(index="Inntekstgruppe", columns="kat", values="value")
+    t = t.div(t.sum(axis=1), axis=0)
+    hw = agents["vekt"] / agents["husholdning"].map(enrich.HH_SIZE)
+    for q, decs in {"41": [1, 2], "44": [9, 10]}.items():
+        m = agents["inntektsdesil"].isin(decs)
+        sim = hw[m & (agents["eierstatus"] == "leier")].sum() / hw[m].sum()
+        assert abs(sim - t.loc[q, "leier"]) < 0.05, q
+
+
+def test_oslo_lives_in_apartments(agents):
+    oslo = agents[agents["fylke"] == "03"]
+    share = oslo.loc[oslo["boligtype"] == "blokk", "vekt"].sum() / oslo["vekt"].sum()
+    assert share > 0.45
+
+
+@pytest.mark.skipif(not (config.RAW_DIR / "ess_norway.parquet").exists(), reason="ESS ikke hentet")
+def test_values_attached_and_balanced(agents):
+    for col in ["verdi_apenhet", "verdi_trygghet", "tillit"]:
+        s = agents.groupby(col)["vekt"].sum() / agents["vekt"].sum()
+        for lvl in ["lav", "middels", "høy"]:
+            assert 0.2 < s[lvl] < 0.45, (col, lvl)
+    # Kjent mønster: åpenhet for endring faller med alder.
+    young = agents[agents["alder"] < 30]
+    old = agents[agents["alder"] >= 67]
+    hi = lambda d: d.loc[d["verdi_apenhet"] == "høy", "vekt"].sum() / d["vekt"].sum()
+    assert hi(young) > hi(old) + 0.2
+
+
+@pytest.mark.skipif(not (config.PROCESSED_DIR / "validation_report.json").exists(), reason="kjør `make validate`")
+def test_value_layer_beats_national_average_on_holdout():
+    import json
+    r = json.loads((config.PROCESSED_DIR / "validation_report.json").read_text(encoding="utf-8"))
+    assert r["snittfeil_panel_pp"] < r["snittfeil_landssnitt_pp"]
+    assert r["snittfeil_panel_pp"] < r["stoygulv_pp"] + 1.5

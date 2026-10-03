@@ -185,15 +185,31 @@ def build() -> dict:
     res = rake(a, margins2, base_weights=base, bounds=(0.1, 10.0), max_iter=500, tol=5e-3)  # kildene er uenige på 0,1–0,5 %; se docs/architecture.md
     a["vekt"] = res.weights
     a["inntektsdesil"] = enrich.draw_income(a.assign(_w=a["vekt"]), rng)
+    a["eierstatus"], a["boligtype"], housing_alpha = enrich.draw_housing(a, rng)
+
 
     # Beriking
     a = a.merge(centr[["kommune", "kommune_navn", "sentralitet"]], on="kommune", how="left")
     a["fylke_navn"] = a["fylke"].map(fylke_navn)
     a["kjonn"] = a["kjonn"].map({"1": "mann", "2": "kvinne"})
+    # L2 – verdilag fra ESS (hoppes over hvis ESS-data ikke er hentet)
+    from synthpanel.values import ess, match
+    donors = ess.load()
+    value_cols = []
+    if donors is not None:
+        donors = donors[donors["agea"] >= 18].reset_index(drop=True)
+        a = match.attach(a, donors, rng)
+        value_cols = ["ess_donor", "verdi_apenhet", "verdi_trygghet", "verdi_selvhevdelse", "verdi_fellesskap",
+                      "tillit", "risikovilje", "politisk_sted", "religiositet", "politisk_interesse",
+                      "klimabekymring", "score_apenhet", "score_trygghet", "score_selvhevdelse",
+                      "score_fellesskap", "score_tillit"]
+    else:
+        import sys
+        print("Merk: ESS-data mangler – verdilaget hoppes over. Kjør `make fetch-ess`.", file=sys.stderr)
     a.insert(0, "agent_id", [f"NO-{i:06d}" for i in range(len(a))])
     a = a[["agent_id", "kommune", "kommune_navn", "fylke", "fylke_navn", "sentralitet",
            "kjonn", "alder", "aldersband", "utdanning", "bakgrunn", "innvkat",
-           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "vekt"]]
+           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "eierstatus", "boligtype", *value_cols, "vekt"]]
 
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     a.to_parquet(config.PROCESSED_DIR / "agents.parquet", index=False)
@@ -210,6 +226,7 @@ def build() -> dict:
         "effective_sample_size": effective_sample_size(a["vekt"].to_numpy()),
         "weight_min": float(a["vekt"].min()),
         "weight_max": float(a["vekt"].max()),
+        "housing_income_damping": housing_alpha,
     }
     with open(config.PROCESSED_DIR / "build_report.json", "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)

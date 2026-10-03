@@ -563,3 +563,111 @@ def draw_income(a: pd.DataFrame, rng: np.random.Generator) -> pd.Series:
         q = np.where(low, u * L, L + u * (1 - L))
         out.loc[idx] = deciles[np.clip(np.searchsorted(cdf, q, side="right") - 1, 0, len(deciles) - 1)]
     return out
+
+
+# ---------------------------------------------------------------------------
+# 5. Bolig: eierstatus og boligtype
+# ---------------------------------------------------------------------------
+
+HH_14901 = {"aleneboende": "1.1", "par_uten_barn": "1.2", "par_smaa_barn": "1.3", "par_store_barn": "1.4",
+            "enslig_smaa_barn": "1.5", "enslig_store_barn": "1.6", "voksne_barn": "1.7",
+            "flerfamilie": "2", "annet": "1-2"}
+EIER = {"1": "selveier", "2": "andelseier", "3": "leier"}
+BYGN = {"11": "enebolig", "12": "tomannsbolig", "13": "rekkehus_smahus", "14b": "blokk", "19": "annen"}
+
+
+def _housing_prior() -> pd.DataFrame:
+    """P(eierstatus, boligtype | fylke, husholdningstype) fra 14901 (husholdninger).
+    Celler som er prikket i et fylke, fylles med landsfordelingen."""
+    h = pd.read_parquet(RAW / "housing_household_14901.parquet")
+    h = h.assign(ht=h["HusholdType"].replace({"2.1": "2", "2.2-2.3": "2"}),
+                 eierstatus=h["EierStatus"].map(EIER), boligtype=h["BygnType"].map(BYGN))
+    h = h.groupby(["Region", "ht", "eierstatus", "boligtype"], as_index=False)["value"].sum(min_count=1)
+    nat = h[h["Region"] == "0"].drop(columns="Region").rename(columns={"value": "nat"})
+    reg = h[h["Region"] != "0"].merge(nat, on=["ht", "eierstatus", "boligtype"])
+    # Bruk fylkets tall der hele fordelingen finnes, ellers landets.
+    ok = reg.groupby(["Region", "ht"])["value"].transform(lambda s: s.notna().all() and s.sum() > 50)
+    reg["p"] = np.where(ok, reg["value"], reg["nat"])
+    reg["p"] = reg["p"] / reg.groupby(["Region", "ht"])["p"].transform("sum")
+    return reg.rename(columns={"Region": "fylke"})[["fylke", "ht", "eierstatus", "boligtype", "p"]]
+
+
+def _income_factors() -> pd.DataFrame:
+    """Forholdstall P(kategori | inntektskvartil) / P(kategori) per fylke, for eierstatus og boligtype."""
+    d = pd.read_parquet(RAW / "housing_income_14900_14921.parquet")
+    d["kat"] = np.where(d["dim"] == "eierstatus", d["kode"].map(EIER), d["kode"].map(BYGN))
+    d["share"] = d["value"] / d.groupby(["Region", "dim", "Inntekstgruppe"])["value"].transform("sum")
+    base = d[d["Inntekstgruppe"] == "0"][["Region", "dim", "kat", "share"]].rename(columns={"share": "base"})
+    q = d[d["Inntekstgruppe"] != "0"].merge(base, on=["Region", "dim", "kat"])
+    q["faktor"] = q["share"] / q["base"]
+    return q.rename(columns={"Region": "fylke", "Inntekstgruppe": "kvartil"})[["fylke", "dim", "kat", "kvartil", "faktor"]]
+
+
+QUART = {1: [("41", 1)], 2: [("41", 1)], 3: [("41", .5), ("42", .5)], 4: [("42", 1)], 5: [("42", 1)],
+         6: [("43", 1)], 7: [("43", 1)], 8: [("43", .5), ("44", .5)], 9: [("44", 1)], 10: [("44", 1)]}
+# Omtrentlig husholdningsstørrelse per type – brukes bare til å sammenligne
+# personfordelingen med SSBs husholdningstall når dempingen tilpasses.
+HH_SIZE = {"aleneboende": 1, "par_uten_barn": 2, "par_smaa_barn": 3.8, "par_store_barn": 4,
+           "enslig_smaa_barn": 2.6, "enslig_store_barn": 2.7, "voksne_barn": 3.2, "flerfamilie": 4, "annet": 3}
+
+
+def _housing_probs(a: pd.DataFrame, alpha: float) -> dict:
+    """Sannsynligheter per (fylke, husholdningstype, desil). Inntektsfaktoren dempes
+    med eksponent `alpha`, fordi husholdningstype allerede fanger en del av
+    inntektseffekten (uten demping telles den to ganger)."""
+    prior = _housing_prior().set_index(["fylke", "ht"]).sort_index()
+    fac = _income_factors().set_index(["fylke", "dim", "kat", "kvartil"])["faktor"]
+    out = {}
+    a2 = a.assign(ht=a["husholdning"].map(HH_14901))
+    for (f, ht, dec) in a2[["fylke", "ht", "inntektsdesil"]].drop_duplicates().itertuples(index=False):
+        p = prior.loc[(f, ht)]
+        mult = np.zeros(len(p))
+        for qv, wq in QUART[int(dec)]:
+            fe = fac.reindex(pd.MultiIndex.from_arrays([[f] * len(p), ["eierstatus"] * len(p), p["eierstatus"], [qv] * len(p)])).fillna(1).to_numpy()
+            fb = fac.reindex(pd.MultiIndex.from_arrays([[f] * len(p), ["boligtype"] * len(p), p["boligtype"], [qv] * len(p)])).fillna(1).to_numpy()
+            mult += wq * (fe * fb) ** alpha
+        w = p["p"].to_numpy() * mult
+        out[(f, ht, int(dec))] = (p["eierstatus"].to_numpy(), p["boligtype"].to_numpy(), w / w.sum())
+    return out
+
+
+def _fit_alpha(a: pd.DataFrame) -> float:
+    """Velg demping slik at eierstatus per inntektskvartil (husholdninger) treffer 14900."""
+    d = pd.read_parquet(RAW / "housing_income_14900_14921.parquet")
+    t = d[(d["Region"] == "0") & (d["dim"] == "eierstatus") & (d["Inntekstgruppe"] != "0")]
+    t = t.assign(kat=t["kode"].map(EIER)).pivot_table(index="Inntekstgruppe", columns="kat", values="value")
+    target = t.div(t.sum(axis=1), axis=0)
+    hw = a["vekt"] / a["husholdning"].map(HH_SIZE)
+    q = a["inntektsdesil"].map(lambda dd: QUART[int(dd)])
+    best, best_err = 1.0, np.inf
+    for alpha in np.linspace(0, 1, 6):
+        probs = _housing_probs(a, alpha)
+        acc = {}
+        for (f, ht, dec), idx in a.assign(ht=a["husholdning"].map(HH_14901)).groupby(["fylke", "ht", "inntektsdesil"]).groups.items():
+            eier, _, p = probs[(f, ht, int(dec))]
+            mass = hw.loc[idx].sum()
+            for qv, wq in QUART[int(dec)]:
+                for e, pp in zip(eier, p):
+                    acc[(qv, e)] = acc.get((qv, e), 0.0) + mass * wq * pp
+        sim = pd.Series(acc).unstack()
+        sim = sim.div(sim.sum(axis=1), axis=0)
+        err = float((sim - target.reindex_like(sim)).abs().mean().mean())
+        if err < best_err:
+            best, best_err = float(alpha), err
+    return best
+
+
+def draw_housing(a: pd.DataFrame, rng: np.random.Generator) -> tuple[pd.Series, pd.Series, float]:
+    """Trekk eierstatus og boligtype samlet, betinget på fylke og husholdningstype,
+    med (dempet) justering for husholdningens inntektskvartil."""
+    alpha = _fit_alpha(a)
+    probs = _housing_probs(a, alpha)
+    eier = pd.Series(index=a.index, dtype=object)
+    bolig = pd.Series(index=a.index, dtype=object)
+    a2 = a.assign(ht=a["husholdning"].map(HH_14901))
+    for (f, ht, dec), idx in a2.groupby(["fylke", "ht", "inntektsdesil"]).groups.items():
+        e, b, p = probs[(f, ht, int(dec))]
+        pick = rng.choice(len(p), size=len(idx), p=p)
+        eier.loc[idx] = e[pick]
+        bolig.loc[idx] = b[pick]
+    return eier, bolig, alpha

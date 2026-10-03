@@ -12,7 +12,7 @@ verdifulle er ofte **gapet** mellom de to.
 |---|---|---|---|
 | **L0 Befolkningsramme** | Kjønn, alder, kommune, fylke, sentralitet, utdanning, landbakgrunn, innvandringskategori, hovedstatus (arbeid/studier/pensjon/trygd), husholdningstype, lavinntekt, inntektsdesil. Neste: yrke/næring, bolig | SSB | ✅ v0.2 |
 | **L1 Fasitbibliotek – atferd** | Valgresultater, mediebruk, forbruk, dagligvare, kjente meningsmålinger. Lagres som *fordelinger med metadata* (kilde, år, spørsmål, populasjon, usikkerhet) | SSB, Valgundersøkelsen, Medietilsynet, publiserte målinger | ⏳ |
-| **L2 Verdilag** | Tillit, frivillighet/dugnad, tro, Schwartz-verdier, politisk engasjement | ESS, Norsk medborgerpanel, WVS (ev. Norsk Monitor på lisens) | ⏳ |
+| **L2 Verdilag** | Schwartz-verdier (fire hovedretninger), tillit, risikovilje, klimabekymring, religiøsitet, politisk ståsted og interesse. Neste: frivillighet, mediebruk, Medborgerpanelet | ESS runde 9–11 (ev. Norsk Monitor på lisens) | ✅ v0.3 |
 | **L3 Arketyper (8–12)** | Utledes statistisk fra L2 (latent klasseanalyse), navngis etterpå. Koblet til L0 → størrelse, geografi, kjøpekraft | Avledet | ⏳ |
 | **L4 Scenariomotor** | Stimulus inn → reaksjon per segment ut, med usikkerhet, volumvekt og spredning over tid (first movers → etternølere) | LLM + kalibrering | Kontrakt i `POST /estimate` |
 | **L5 Mediekobling** | Fersk kontekst fra Signalist (Brands / People / Debates) | Signalist API | Senere – via avtale |
@@ -49,6 +49,8 @@ vektene kalibreres (raking) mot 15 marginaler fra SSB i to pass.
 | Husholdningstype | fylke, kjønn, alder | 06071, 12836, 10986 | kjønn × alder (18–29, 30–44, 45–61, 62–66, 67+) |
 | Lavinntekt (EU-60) | husholdning, status, innvandring, utdanning | 12599, 09570 | hver av gruppene |
 | Inntektsdesil | fylke, husholdningstype, lavinntekt | 12563 | – (trekkes etter kalibrering) |
+| Eierstatus og boligtype | fylke, husholdningstype, inntektskvartil (dempet) | 14901, 14900, 14921 | – (dempingen tilpasses så eierstatus per kvartil treffer 14900) |
+| Verdier og holdninger | kjønn, alder, utdanning, inntekt, region, innvandring, status, bosted, aleneboende | ESS 9–11 | – (statistisk matching, se under) |
 
 Resultat v0.2: 50 751 agenter, effektiv utvalgsstørrelse ≈ 45 500. Kommunetall
 er eksakte. Alle marginaler ligger under 0,2 % feilplassert befolkning, unntatt
@@ -57,6 +59,55 @@ de to utdanningsmarginalene for innvandrere (≈ 0,45 %), der kildene er uenige.
 **Uavhengig kontroll:** innvandreres utdanning etter kjønn per fylke (12934) er
 ikke brukt i kalibreringen. Snittavvik i andel med høyere utdanning: 1,5
 prosentpoeng; under 3 pp for alle grupper med minst 300 agenter.
+
+## L2 – verdilaget
+
+Hver agent får en «donor»: en ekte norsk ESS-respondent med lik demografi
+(nærmeste nabo på kjønn, alder, utdanning, inntektsdesil, region, innvandring,
+hovedstatus, bosted og om personen bor alene; trekkes blant de 15 nærmeste
+etter ESS-vekt og hvor ny runden er). Agenten arver donorens svar. Slik bevares
+sammenhengen *mellom* verdiene, ikke bare fordelingen av hver.
+
+Avledede mål: Schwartz' fire hovedretninger (åpenhet for endring, bevaring,
+selvhevdelse, selvoverskridelse) beregnes etter ESS-anbefaling (sentrert per
+person) og deles i nasjonale tertiler. Tillit = snitt av fire institusjoner.
+Klimabekymring finnes bare i runde 10–11 og matches separat.
+
+### Testsett (`make validate`)
+
+30 % av norske respondenter i runde 11 holdes helt utenfor. Panelet bygges med
+resten og skal anslå andelen «høy» (o.l.) i 11 indikatorer for undergrupper
+(kjønn, alder, utdanning, region, innvandring, status og kryss). 330 celler.
+
+| | Snittfeil |
+|---|---|
+| Landssnitt uten demografi | 7,1 pp |
+| **Synthpanel** | **5,2 pp** |
+| Støygulv (testgruppens størrelse) | 4,5 pp |
+
+Panelet slår landssnittet på 10 av 11 indikatorer. Til sammenligning fant Pew
+12 pp snittfeil for LLM-genererte «digitale tvillinger» – men det er ulike
+spørsmål og oppsett, så tallene er ikke direkte sammenlignbare. Det viktige er
+prinsippet: tallene kommer fra ekte respondenter, ikke fra språkmodellen.
+
+### Kjente svakheter i verdilaget
+
+- **Få respondenter.** 4 154 nordmenn; hver donor brukes i snitt ~13 ganger.
+  Smale segmenter arver verdiene fra et lite antall personer.
+- **Tidsspenn 2018–2024.** Holdninger endrer seg; nyere runder vektes høyere,
+  men runde 9 er med.
+- **Runde 9 bruker gamle regioner** (NUTS 2016); delte regioner matcher bredt.
+- **Verdier henger sammen med demografi bare gjennom matching-variablene.**
+  Lokale forskjeller utover region og bosted fanges ikke.
+- **ESS-vilkårene** skiller mellom forsknings- og kommersiell bruk. Må avklares
+  før panelet selges.
+
+### Kjente svakheter i boliglaget
+
+- Tabellene gjelder husholdninger; agentene er personer. Husholdningsstørrelse
+  er tilnærmet per type ved tilpasning.
+- Andelen leiere i andre inntektskvartil ligger ~10 pp over SSB (desiler og
+  SSBs kvartiler er ikke helt samme mål).
 
 ### Kjente svakheter i v0.2
 
@@ -107,7 +158,9 @@ Opoint-data avtales eksplisitt før kobling.
 
 1. ✅ L0 befolkningsramme + API + utforsker
 2. ✅ L0b: innvandringskategori, hovedstatus, husholdning, lavinntekt, inntekt
-3. Testsett: 30–50 spørsmål med norske svar per undergruppe (Medborgerpanelet, ESS)
-4. L2 verdilag og L3 arketyper v0
-5. L4 første scenario ende-til-ende (Tine), målt mot testsettet
-6. L5 kobling til Signalist
+3. ✅ L2 verdilag fra ESS + første testsett; bolig
+4. Forbruksprofil (SSB forbruksundersøkelse), netthandel, mediebruk, fritid
+5. Utvidet testsett: Norsk medborgerpanel og publiserte målinger
+6. L3 arketyper v0 (latent klasseanalyse på verdilaget)
+7. L4 første scenario ende-til-ende (Tine), målt mot testsettet
+8. L5 kobling til Signalist

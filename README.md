@@ -6,11 +6,12 @@ på offisiell statistikk. Målet er et prediksjonsverktøy som kan svare på
 budskap eller en debatt – og hvor store, hvor bosatte og hvor viktige
 segmentene er.
 
-> Status: **v0.2 – L0 befolkningsramme ferdig.** 50 751 syntetiske agenter som
-> til sammen gjenskaper SSB-tallene for kjønn, alder, kommune, sentralitet,
-> utdanning, landbakgrunn, innvandringskategori, hovedstatus, husholdningstype,
-> lavinntekt og husholdningsinntekt. Scenariomotoren (L4) har definert kontrakt, men er
-> ikke bygget ennå. Se [docs/architecture.md](docs/architecture.md).
+> Status: **v0.3 – befolkningsramme (L0) og verdilag (L2).** 50 751 syntetiske
+> agenter som gjenskaper SSB-tallene for kjønn, alder, kommune, sentralitet,
+> utdanning, landbakgrunn, innvandringskategori, hovedstatus, husholdning,
+> lavinntekt, inntekt og bolig – og som har fått verdier og holdninger fra
+> European Social Survey (testet mot respondenter modellen ikke har sett).
+> Scenariomotoren (L4) har definert kontrakt, men er ikke bygget ennå. Se [docs/architecture.md](docs/architecture.md).
 
 ## Kom i gang
 
@@ -29,11 +30,22 @@ det skiller seg fra resten av befolkningen.
 API-dokumentasjon med «Try it out»: `http://localhost:8090/docs`
 (tjenesten lytter kun på localhost som standard – se `docker-compose.yml`).
 
+**Verdilaget (ESS):** Opprett gratis bruker på https://ess.sikt.no, finn din
+bruker-ID under https://ess.sikt.no/en/api og legg den i en fil `.env` i
+prosjektmappen (filen sjekkes ikke inn i git):
+
+```bash
+echo "ESS_USER_ID=din-id-her" > .env
+```
+
+Uten ID bygges panelet som før, bare uten verdier og holdninger.
+
 **Lokalt (utvikling):**
 
 ```bash
 make install   # pip install -e ".[dev]"
 make data      # hent fra SSB + bygg populasjon
+make validate  # testsett: verdilaget mot ESS-respondenter panelet ikke har sett
 make test
 make serve     # http://localhost:8090 (utforsker) og /docs (API)
 ```
@@ -69,6 +81,9 @@ src/synthpanel/
   frame/fetch.py            henter rådata  -> data/raw/*.parquet
   frame/build.py            bygger agenter -> data/processed/agents.parquet
   calibrate/raking.py       raking/IPF – vekter agenter mot kjente totaler
+  values/ess.py             henter ESS via API (Norge, runde 9–11)
+  values/match.py           verdilag: statistisk matching av ESS-respondenter
+  values/validate.py        testsett mot holdte ESS-respondenter
   api/main.py               FastAPI
   web/index.html            befolkningsutforskeren (ren HTML/JS, ingen byggesteg)
 tests/                      kalibrering, SSB-avstemming, API
@@ -84,6 +99,8 @@ noe må skrives om. Port 8090 for å ikke kollidere med Signalist på 8080.
 
 ## Datakilder
 
-Kun åpne data fra SSB: 16 tabeller pluss Klass 128 (sentralitet). Oversikt over
+Åpne data: 19 SSB-tabeller pluss Klass 128 (sentralitet), og European Social
+Survey runde 9–11 (4 154 norske respondenter, 2018–2024). ESS-vilkårene skiller
+mellom forsknings- og kommersiell bruk – avklar før panelet selges. Oversikt over
 hvilken tabell som brukes til hva står i [docs/architecture.md](docs/architecture.md). Se `GET /meta` for nøyaktige perioder og
 hentetidspunkt.

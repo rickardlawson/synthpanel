@@ -88,6 +88,11 @@
   .sw-bar{width:16px; height:10px; background:var(--data); border-radius:0 3px 3px 0}
   .sw-ref{width:2px; height:14px; background:var(--ref)}
 
+  .sec{font-weight:700; font-size:.78rem; color:var(--ink-3); margin:26px 0 12px; padding-top:14px; border-top:1px solid var(--rule)}
+  #filters .sec:first-child{margin-top:0; padding-top:0; border-top:0}
+  .dims-sec{grid-column:1/-1; margin-top:18px}
+  .dims-sec:first-child{margin-top:0}
+  .dims-sec h2{margin-bottom:4px}
   .dims{display:grid; grid-template-columns:repeat(auto-fill, minmax(330px,1fr)); gap:34px 44px}
   .dim h3{font-size:.98rem; font-weight:600; margin:0 0 10px}
   .row{
@@ -148,7 +153,7 @@
     <div class="key"><span><i class="sw-bar"></i>Utvalget</span><span><i class="sw-ref"></i>Hele befolkningen</span></div>
     <div class="dims" id="dims"></div>
 
-    <footer id="foot">Kilde: SSB. Tallene er vektede estimater fra en syntetisk populasjon kalibrert mot offisiell statistikk.</footer>
+    <footer id="foot">Kilder: SSB (befolkning, utdanning, arbeid, husholdning, inntekt, bolig) og European Social Survey runde 9–11 (verdier og holdninger). Tallene er vektede estimater fra en syntetisk populasjon kalibrert mot offisiell statistikk.</footer>
   </main>
 </div>
 <div class="tip" id="tip" role="tooltip"></div>
@@ -184,10 +189,25 @@ const DIMS = [
   {key:"lavinntekt", title:"Lavinntekt (EU-60)", order:["ja","nei"], label:{ja:"Lavinntekt", nei:"Ikke lavinntekt"}},
   {key:"inntektsdesil", title:"Husholdningsinntekt (desil)", order:["1","2","3","4","5","6","7","8","9","10"],
    label:{"1":"1 – lavest","2":"2","3":"3","4":"4","5":"5","6":"6","7":"7","8":"8","9":"9","10":"10 – høyest"}},
+  {key:"eierstatus", title:"Eierstatus", order:["selveier","andelseier","leier"],
+   label:{selveier:"Selveier", andelseier:"Andels-/aksjeeier", leier:"Leier"}},
+  {key:"boligtype", title:"Boligtype", order:["enebolig","tomannsbolig","rekkehus_smahus","blokk","annen"],
+   label:{enebolig:"Enebolig", tomannsbolig:"Tomannsbolig", rekkehus_smahus:"Rekkehus/småhus", blokk:"Blokk", annen:"Annen"}},
+  ...[["verdi_apenhet","Åpenhet for endring"],["verdi_trygghet","Trygghet og tradisjon"],
+      ["verdi_selvhevdelse","Suksess og status"],["verdi_fellesskap","Omsorg og fellesskap"],
+      ["tillit","Tillit til institusjoner"],["risikovilje","Risikovilje"],["klimabekymring","Klimabekymring"],
+      ["religiositet","Religiøsitet"]].map(([key,title])=>({key, title, order:["lav","middels","høy"],
+        label:{lav:"Lav", middels:"Middels", høy:"Høy"}})),
+  {key:"politisk_sted", title:"Politisk ståsted", order:["venstre","sentrum","høyre"],
+   label:{venstre:"Venstre", sentrum:"Sentrum", høyre:"Høyre"}},
+  {key:"politisk_interesse", title:"Interesse for politikk", order:["lav","høy"], label:{lav:"Lav", høy:"Høy"}},
 ];
+const SECTIONS = {kjonn:"Hvem", arbeidsstatus:"Livssituasjon, økonomi og bolig", verdi_apenhet:"Verdier og holdninger"};
+const SECTION_NOTE = {verdi_apenhet: "valuesNote"};
 const state = Object.fromEntries(DIMS.map(d=>[d.key, new Set()]));
 let base = {};           // hele befolkningen per dimensjon
 let fylkeCode = {};      // navn -> kode
+let valuesNoteText = "Estimert fra European Social Survey, ikke registerdata.";
 
 const shortFylke = n => n.split(" - ")[0];
 
@@ -211,6 +231,15 @@ async function init(){
     const rows = await get("/population/breakdown", {by:[d.by||d.key]});
     base[d.key] = Object.fromEntries(rows.map(r=>[d.key==="fylke" ? fylkeCode[r.fylke_navn] : r[d.key], r.andel]));
   }
+  try {
+    const meta = await get("/meta");
+    const v = meta.validation;
+    const f1 = x => Number(x).toFixed(1).replace(".", ",");
+    if (v) valuesNoteText = `Estimert fra European Social Survey (4 154 nordmenn, 2018–2024), ikke registerdata. `
+      + `Testet mot ${v.holdout_respondenter} respondenter panelet ikke har sett: snittfeil ${f1(v.snittfeil_panel_pp)} prosentpoeng `
+      + `per undergruppe, mot ${f1(v.snittfeil_landssnitt_pp)} for landssnittet. `
+      + `Lavere enn ${f1(v.stoygulv_pp)} er ikke mulig å måle med dette testsettet.`;
+  } catch(e) {}
   renderFilters(); buildGrid(); await refresh();
 }
 
@@ -218,6 +247,9 @@ function renderFilters(){
   const host = document.getElementById("filters");
   host.innerHTML = "";
   for (const d of DIMS){
+    if (SECTIONS[d.key]){
+      const h = document.createElement("p"); h.className = "sec"; h.textContent = SECTIONS[d.key]; host.appendChild(h);
+    }
     const fs = document.createElement("fieldset");
     fs.innerHTML = `<legend>${d.title}</legend><div class="chips"></div>`;
     const box = fs.querySelector(".chips");
@@ -290,6 +322,20 @@ function describe(){
     parts.push("med husholdningsinntekt i " + (inc.length===1 ? `desil ${inc[0]}` :
       contiguous ? `desil ${inc[0]}–${inc.at(-1)}` : `desil ${joinNb(inc.map(String))}`));
   }
+  const eo = pick("eierstatus");
+  if (eo.length) parts.push(orNb(eo.map(v=>({selveier:"som eier boligen", andelseier:"som eier via borettslag eller aksjer", leier:"som leier"})[v])));
+  const bt = pick("boligtype");
+  if (bt.length) parts.push("i " + orNb(bt.map(v=>({enebolig:"enebolig", tomannsbolig:"tomannsbolig", rekkehus_smahus:"rekkehus eller småhus", blokk:"blokk", annen:"annen boligtype"})[v])));
+  const valueNames = {verdi_apenhet:"åpenhet for endring", verdi_trygghet:"vekt på trygghet og tradisjon",
+    verdi_selvhevdelse:"vekt på suksess og status", verdi_fellesskap:"vekt på omsorg og fellesskap",
+    tillit:"tillit til institusjoner", risikovilje:"risikovilje", klimabekymring:"klimabekymring", religiositet:"religiøsitet",
+    politisk_interesse:"politisk interesse"};
+  for (const [k, noun] of Object.entries(valueNames)){
+    const v = pick(k);
+    if (v.length) parts.push(`med ${orNb(v.map(x=>({lav:"lav", middels:"middels", høy:"høy"})[x]))} ${noun}`);
+  }
+  const ps = pick("politisk_sted");
+  if (ps.length) parts.push("som plasserer seg " + orNb(ps.map(v=>({venstre:"til venstre", sentrum:"i sentrum", høyre:"til høyre"})[v])));
   const any = Object.values(state).some(s=>s.size);
   return any ? parts.join(" ") : "Alle voksne i Norge";
 }
@@ -335,6 +381,11 @@ function renderDims(per, nAgents){
     let order = d.order;
     if (d.key==="fylke") order = [...order].sort((a,b)=>(seg[b]?.andel||0)-(seg[a]?.andel||0));
     const max = Math.max(...order.map(v=>Math.max(seg[v]?.andel||0, base[d.key][v]||0)), 0.0001);
+    if (SECTIONS[d.key]){
+      const h = document.createElement("div"); h.className = "dims-sec";
+      h.innerHTML = `<h2>${SECTIONS[d.key]}</h2>` + (SECTION_NOTE[d.key] ? `<p class="h2-sub" id="${SECTION_NOTE[d.key]}"></p>` : "");
+      host.appendChild(h);
+    }
     const wrap = document.createElement("section");
     wrap.className = "dim";
     wrap.innerHTML = `<h3>${d.title}</h3>`;
@@ -353,6 +404,8 @@ function renderDims(per, nAgents){
     }
     host.appendChild(wrap);
   });
+  const note = document.getElementById("valuesNote");
+  if (note) note.textContent = valuesNoteText;
 }
 
 const tip = document.getElementById("tip");

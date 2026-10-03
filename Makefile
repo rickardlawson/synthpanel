@@ -1,4 +1,4 @@
-.PHONY: install fetch build data test serve up down rebuild-data
+.PHONY: install fetch fetch-ess build data test validate serve up down rebuild-data
 
 install:
 	pip install -e ".[dev]"
@@ -9,7 +9,14 @@ fetch:          ## Hent rådata fra SSB
 build:          ## Bygg syntetisk populasjon fra rådata
 	python -m synthpanel.frame.build
 
-data: fetch build
+fetch-ess:      ## Hent ESS (verdier) – krever ESS_USER_ID, f.eks. i .env
+	@if [ -f .env ]; then set -a; . ./.env; set +a; fi; \
+	if [ -n "$$ESS_USER_ID" ]; then python -m synthpanel.values.ess; else echo "Hopper over ESS: ESS_USER_ID er ikke satt (se README)"; fi
+
+data: fetch fetch-ess build
+
+validate:       ## Testsett: mål verdilaget mot holdte ESS-respondenter
+	python -m synthpanel.values.validate
 
 test:
 	pytest -q
