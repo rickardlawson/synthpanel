@@ -21,6 +21,10 @@ docker compose up -d --build      # første oppstart henter SSB-data og bygger (
 curl localhost:8090/health
 ```
 
+Befolkningsutforsker: `http://localhost:8090/` – velg kjønn, alder, fylke,
+sentralitet, utdanning og landbakgrunn, og se hvor stort segmentet er og hvordan
+det skiller seg fra resten av befolkningen.
+
 API-dokumentasjon med «Try it out»: `http://localhost:8090/docs`
 (tjenesten lytter kun på localhost som standard – se `docker-compose.yml`).
 
@@ -30,7 +34,7 @@ API-dokumentasjon med «Try it out»: `http://localhost:8090/docs`
 make install   # pip install -e ".[dev]"
 make data      # hent fra SSB + bygg populasjon
 make test
-make serve     # http://localhost:8090/docs
+make serve     # http://localhost:8090 (utforsker) og /docs (API)
 ```
 
 Oppdatere med ferske SSB-tall: `make rebuild-data` (Docker) eller `make data`.
@@ -65,6 +69,7 @@ src/synthpanel/
   frame/build.py            bygger agenter -> data/processed/agents.parquet
   calibrate/raking.py       raking/IPF – vekter agenter mot kjente totaler
   api/main.py               FastAPI
+  web/index.html            befolkningsutforskeren (ren HTML/JS, ingen byggesteg)
 tests/                      kalibrering, SSB-avstemming, API
 docs/architecture.md        modellen L0–L5, prinsipper og veikart
 ```

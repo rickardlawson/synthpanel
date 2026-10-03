@@ -12,7 +12,10 @@ from functools import lru_cache
 from typing import Annotated
 
 import duckdb
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from synthpanel import __version__, config
@@ -41,13 +44,19 @@ DIMENSIONS = {
 
 
 @lru_cache
-def _con() -> duckdb.DuckDBPyConnection:
+def _db() -> duckdb.DuckDBPyConnection:
     path = config.PROCESSED_DIR / "agents.parquet"
     if not path.exists():
         raise RuntimeError("Fant ikke agents.parquet – kjør `make build` først.")
     con = duckdb.connect()
     con.execute(f"CREATE VIEW agents AS SELECT * FROM read_parquet('{path.as_posix()}')")
     return con
+
+
+def _con() -> duckdb.DuckDBPyConnection:
+    """Egen cursor per kall. En DuckDB-tilkobling er ikke trådsikker, og FastAPI
+    kjører synkrone endepunkter parallelt i en trådpool."""
+    return _db().cursor()
 
 
 def _where(filters: dict[str, list[str] | None]) -> tuple[str, list]:
@@ -101,8 +110,9 @@ def size(
 ):
     """Hvor mange voksne passer beskrivelsen? Filtre kan gjentas (?fylke=03&fylke=32)."""
     where, params = _where(_filters(kjonn, aldersband, fylke, kommune, sentralitet, utdanning, bakgrunn))
-    total = _con().execute("SELECT SUM(vekt) FROM agents").fetchone()[0]
-    persons, n = _con().execute(f"SELECT COALESCE(SUM(vekt),0), COUNT(*) FROM agents {where}", params).fetchone()
+    con = _con()
+    total = con.execute("SELECT SUM(vekt) FROM agents").fetchone()[0]
+    persons, n = con.execute(f"SELECT COALESCE(SUM(vekt),0), COUNT(*) FROM agents {where}", params).fetchone()
     return {
         "personer": round(persons),
         "andel_av_voksne": persons / total,
@@ -163,3 +173,11 @@ class EstimateRequest(BaseModel):
 def estimate(req: EstimateRequest):
     """Scenarioestimat per segment. Kommer i L4 – her ligger kontrakten."""
     raise HTTPException(501, "Scenariomotoren (L4) er ikke bygget ennå.")
+
+
+# ---------------------------------------------------------------------------
+# Frontend: befolkningsutforskeren på http://localhost:8090/
+# Montert sist, så API-rutene over har forrang.
+# ---------------------------------------------------------------------------
+WEB_DIR = Path(__file__).resolve().parents[1] / "web"
+app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")

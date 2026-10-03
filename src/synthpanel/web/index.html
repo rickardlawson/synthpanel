@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthpanel – befolkningen</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%231F5F8B%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --surface:#EEF1EF;      /* lav – kjølig lys flate */
+    --panel:#F8FAF9;
+    --ink:#17282B;          /* granmørk */
+    --ink-2:#4A5D60;
+    --ink-3:#7D8C8E;
+    --rule:#D3DAD8;
+    --cell:#D9DFDD;         /* tomme ruter */
+    --data:#1F5F8B;         /* fjordblå – eneste datafarge */
+    --data-soft:#C9DCEA;
+    --ref:#17282B;          /* referansestrek: hele befolkningen */
+    --warn:#9A5B00;
+    --focus:#1F5F8B;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --surface:#0F1A1C; --panel:#152326; --ink:#E6EDEB; --ink-2:#A9B7B6; --ink-3:#748584; --rule:#24363A; --cell:#22363A; --data:#6FB0DE; --data-soft:#20435A;
+      --ref:#E6EDEB; --warn:#E0A64A; --focus:#6FB0DE;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--surface); color:var(--ink);
+    font-family:"Schibsted Grotesk", system-ui, sans-serif;
+    font-size:16px; line-height:1.5;
+  }
+  button{font:inherit; color:inherit}
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+
+  .app{display:grid; grid-template-columns:280px minmax(0,1fr); min-height:100vh}
+  aside{
+    border-right:1px solid var(--rule); padding:28px 22px 40px;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .brand{font-weight:800; font-size:1.15rem; letter-spacing:-.01em; margin:0 0 2px}
+  .brand-sub{color:var(--ink-3); font-size:.85rem; margin:0 0 26px}
+  fieldset{border:0; padding:0; margin:0 0 20px}
+  legend{font-weight:600; font-size:.9rem; margin-bottom:8px; padding:0}
+  .chips{display:flex; flex-wrap:wrap; gap:6px}
+  .chip{
+    border:1px solid var(--rule); background:var(--panel); border-radius:999px;
+    padding:4px 11px; font-size:.84rem; cursor:pointer; line-height:1.35;
+  }
+  .chip:hover{border-color:var(--ink-3)}
+  .chip[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+  .reset{
+    margin-top:6px; background:none; border:0; padding:0; color:var(--ink-2);
+    text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-size:.88rem;
+  }
+  .reset:disabled{opacity:.4; cursor:default; text-decoration:none}
+
+  main{padding:44px 56px 80px; max-width:1180px}
+  .who{
+    font-size:clamp(1.9rem, 3.4vw, 3rem); font-weight:700; line-height:1.08;
+    letter-spacing:-.025em; margin:0 0 18px; max-width:22ch; text-wrap:balance;
+  }
+  .count{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 22px; margin:0 0 26px}
+  .count .n{font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums}
+  .count .p{color:var(--ink-2); font-size:1.05rem}
+  .count .basis{color:var(--ink-3); font-size:.88rem}
+  .count .basis.warn{color:var(--warn)}
+
+  .grid{
+    display:grid; grid-template-columns:repeat(50, 1fr); gap:2px;
+    max-width:760px; margin:0 0 8px;
+  }
+  .grid i{display:block; aspect-ratio:1; background:var(--cell); border-radius:1.5px}
+  .grid i.on{background:var(--data)}
+  .grid-note{color:var(--ink-3); font-size:.85rem; margin:0 0 56px; max-width:760px}
+
+  h2{font-size:1.25rem; font-weight:700; letter-spacing:-.01em; margin:0 0 4px}
+  .h2-sub{color:var(--ink-2); margin:0 0 18px; max-width:68ch}
+  .key{display:flex; gap:18px; color:var(--ink-2); font-size:.85rem; margin:0 0 22px}
+  .key span{display:inline-flex; align-items:center; gap:7px}
+  .sw-bar{width:16px; height:10px; background:var(--data); border-radius:0 3px 3px 0}
+  .sw-ref{width:2px; height:14px; background:var(--ref)}
+
+  .dims{display:grid; grid-template-columns:repeat(auto-fill, minmax(330px,1fr)); gap:34px 44px}
+  .dim h3{font-size:.98rem; font-weight:600; margin:0 0 10px}
+  .row{
+    display:grid; grid-template-columns:128px minmax(0,1fr) 52px; align-items:center;
+    gap:10px; font-size:.84rem; min-height:24px; position:relative;
+  }
+  .row .lab{color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .row .val{text-align:right; color:var(--ink)}
+  .track{position:relative; height:16px}
+  .bar{
+    position:absolute; left:0; top:3px; height:10px; background:var(--data);
+    border-radius:0 4px 4px 0; transition:width .35s ease;
+  }
+  .refmark{position:absolute; top:0; width:2px; height:16px; background:var(--ref); margin-left:-1px}
+  .row:hover .lab{color:var(--ink)}
+  .tip{
+    position:fixed; pointer-events:none; background:var(--ink); color:var(--surface);
+    font-size:.8rem; padding:7px 10px; border-radius:6px; max-width:260px; z-index:10;
+    opacity:0; transition:opacity .1s;
+  }
+  .idx-hi{color:var(--data); font-weight:600}
+  .muted{color:var(--ink-3)}
+  footer{margin-top:64px; color:var(--ink-3); font-size:.82rem; max-width:72ch}
+  .err{color:var(--warn); margin:0 0 20px}
+
+  @media (max-width:860px){
+    .app{grid-template-columns:1fr}
+    aside{position:static; height:auto; border-right:0; border-bottom:1px solid var(--rule); padding:20px 16px}
+    main{padding:28px 16px 60px}
+    .grid{grid-template-columns:repeat(40,1fr)}
+    .dims{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){ .bar{transition:none} }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <p class="brand">Synthpanel</p>
+    <p class="brand-sub">Voksne i Norge, 18 år og eldre</p>
+    <div id="filters"></div>
+    <button class="reset" id="reset" disabled>Nullstill utvalget</button>
+  </aside>
+
+  <main>
+    <p class="err" id="err" hidden></p>
+    <h1 class="who" id="who">Alle voksne i Norge</h1>
+    <div class="count">
+      <span class="n" id="n">–</span>
+      <span class="p" id="p"></span>
+      <span class="basis" id="basis"></span>
+    </div>
+    <div class="grid" id="grid" role="img" aria-label=""></div>
+    <p class="grid-note">Hver rute er én promille av den voksne befolkningen, omtrent 4 500 personer.</p>
+
+    <h2>Hvem er i utvalget?</h2>
+    <p class="h2-sub">Stolpene viser hvordan utvalget fordeler seg. Streken viser hele den voksne befolkningen, så du ser hva som er over- og underrepresentert.</p>
+    <div class="key"><span><i class="sw-bar"></i>Utvalget</span><span><i class="sw-ref"></i>Hele befolkningen</span></div>
+    <div class="dims" id="dims"></div>
+
+    <footer id="foot">Kilde: SSB. Tallene er vektede estimater fra en syntetisk populasjon kalibrert mot offisiell statistikk.</footer>
+  </main>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+const API = "";
+const fmt = new Intl.NumberFormat("nb-NO");
+const pct = v => (v*100).toLocaleString("nb-NO",{maximumFractionDigits: v < 0.01 ? 2 : 1}) + " %";
+
+const AGE = ["18-19","20-24","25-29","30-39","40-49","50-59","60-66","67-79","80+"];
+const DIMS = [
+  {key:"kjonn", title:"Kjønn", order:["kvinne","mann"],
+   label:{kvinne:"Kvinner", mann:"Menn"}},
+  {key:"aldersband", title:"Alder", order:AGE, label:Object.fromEntries(AGE.map(a=>[a, a.replace("-", "–")+" år"]))},
+  {key:"fylke", by:"fylke_navn", title:"Fylke", label:{}},
+  {key:"sentralitet", title:"Sentralitet", order:["01","02","03","04","05","06"],
+   label:{"01":"1 – mest sentral","02":"2","03":"3","04":"4","05":"5","06":"6 – minst sentral"}},
+  {key:"utdanning", title:"Utdanning", order:["grunnskole","videregaende","fagskole","uh_kort","uh_lang","uoppgitt"],
+   label:{grunnskole:"Grunnskole", videregaende:"Videregående", fagskole:"Fagskole",
+          uh_kort:"Kort høyere", uh_lang:"Lang høyere", uoppgitt:"Uoppgitt"}},
+  {key:"bakgrunn", title:"Landbakgrunn", order:["norsk","europa","asia","afrika","annet"],
+   label:{norsk:"Norsk", europa:"Europa", asia:"Asia", afrika:"Afrika", annet:"Annen verdensdel"}},
+];
+const state = Object.fromEntries(DIMS.map(d=>[d.key, new Set()]));
+let base = {};           // hele befolkningen per dimensjon
+let fylkeCode = {};      // navn -> kode
+
+const shortFylke = n => n.split(" - ")[0];
+
+async function get(path, params){
+  const qs = new URLSearchParams();
+  for (const [k,vs] of Object.entries(params||{})) for (const v of [].concat(vs)) qs.append(k, v);
+  const r = await fetch(API + path + (qs.toString() ? "?" + qs : ""));
+  if (!r.ok) throw new Error(`${path}: ${r.status}`);
+  return r.json();
+}
+const filterParams = () => Object.fromEntries(Object.entries(state).filter(([,s])=>s.size).map(([k,s])=>[k,[...s]]));
+
+async function init(){
+  // Fylkesnavn og -koder
+  const pairs = await get("/population/breakdown", {by:["fylke","fylke_navn"]});
+  const fy = DIMS.find(d=>d.key==="fylke");
+  fy.order = pairs.map(r=>r.fylke).sort((a,b)=>shortFylke(pairs.find(p=>p.fylke===a).fylke_navn).localeCompare(shortFylke(pairs.find(p=>p.fylke===b).fylke_navn),"nb"));
+  for (const r of pairs){ fy.label[r.fylke] = shortFylke(r.fylke_navn); fylkeCode[r.fylke_navn] = r.fylke; }
+
+  for (const d of DIMS){
+    const rows = await get("/population/breakdown", {by:[d.by||d.key]});
+    base[d.key] = Object.fromEntries(rows.map(r=>[d.key==="fylke" ? fylkeCode[r.fylke_navn] : r[d.key], r.andel]));
+  }
+  renderFilters(); buildGrid(); await refresh();
+}
+
+function renderFilters(){
+  const host = document.getElementById("filters");
+  host.innerHTML = "";
+  for (const d of DIMS){
+    const fs = document.createElement("fieldset");
+    fs.innerHTML = `<legend>${d.title}</legend><div class="chips"></div>`;
+    const box = fs.querySelector(".chips");
+    for (const v of d.order){
+      const b = document.createElement("button");
+      b.className = "chip"; b.type = "button"; b.textContent = d.label[v] ?? v;
+      b.setAttribute("aria-pressed", state[d.key].has(v));
+      b.onclick = () => { state[d.key].has(v) ? state[d.key].delete(v) : state[d.key].add(v);
+                          b.setAttribute("aria-pressed", state[d.key].has(v)); refresh(); };
+      box.appendChild(b);
+    }
+    host.appendChild(fs);
+  }
+}
+
+function buildGrid(){
+  const g = document.getElementById("grid");
+  g.innerHTML = "<i></i>".repeat(1000);
+}
+
+function joinNb(list){
+  return list.length <= 1 ? list.join("") : list.slice(0,-1).join(", ") + " og " + list.at(-1);
+}
+function ageText(sel){
+  const idx = AGE.map((a,i)=>sel.has(a)?i:-1).filter(i=>i>=0);
+  if (!idx.length) return "";
+  const contiguous = idx.every((v,i)=>i===0||v===idx[i-1]+1);
+  if (contiguous){
+    const lo = AGE[idx[0]].split("-")[0], hiBand = AGE[idx.at(-1)];
+    return hiBand.endsWith("+") ? `${lo} år og eldre` : `${lo}–${hiBand.split("-")[1]} år`;
+  }
+  return joinNb(idx.map(i=>AGE[i].replace("-","–"))) + " år";
+}
+function describe(){
+  const d = k => DIMS.find(x=>x.key===k);
+  const pick = k => d(k).order.filter(v=>state[k].has(v));
+  const parts = [];
+  const kj = pick("kjonn");
+  parts.push(kj.length===1 ? (kj[0]==="kvinne"?"Kvinner":"Menn") : "Voksne");
+  const age = ageText(state.aldersband); if (age) parts.push(age);
+  const fy = pick("fylke").map(v=>d("fylke").label[v]); if (fy.length) parts.push("i " + joinNb(fy));
+  const se = pick("sentralitet").map(v=>v.slice(1)); if (se.length) parts.push(`i kommuner med sentralitet ${joinNb(se)}`);
+  const edu = pick("utdanning").map(v=>({grunnskole:"grunnskole",videregaende:"videregående",fagskole:"fagskole",uh_kort:"kort høyere utdanning",uh_lang:"lang høyere utdanning",uoppgitt:"uoppgitt utdanning"})[v]);
+  if (edu.length) parts.push("med " + joinNb(edu));
+  const bg = pick("bakgrunn");
+  if (bg.length){
+    const ln = bg.map(v=>({norsk:"norsk bakgrunn",europa:"Europa",asia:"Asia",afrika:"Afrika",annet:"annen verdensdel"})[v]);
+    const foreign = bg.filter(v=>v!=="norsk").length;
+    parts.push(bg.length===1 && bg[0]==="norsk" ? "med norsk bakgrunn" : (foreign===bg.length ? "med bakgrunn fra " : "med ") + joinNb(ln));
+  }
+  const any = Object.values(state).some(s=>s.size);
+  return any ? parts.join(" ") : "Alle voksne i Norge";
+}
+
+let seq = 0;
+async function refresh(){
+  const my = ++seq;
+  const fp = filterParams();
+  document.getElementById("reset").disabled = !Object.keys(fp).length;
+  document.getElementById("who").textContent = describe();
+  try{
+    const size = await get("/population/size", fp);
+    const per = await Promise.all(DIMS.map(d=>get("/population/breakdown", {...fp, by:[d.by||d.key]})));
+    if (my !== seq) return;
+    document.getElementById("err").hidden = true;
+
+    document.getElementById("n").textContent = fmt.format(size.personer) + " personer";
+    document.getElementById("p").textContent = pct(size.andel_av_voksne) + " av voksne";
+    const basis = document.getElementById("basis");
+    basis.textContent = `bygger på ${fmt.format(size.agenter)} syntetiske personer` + (size.agenter < 100 ? " – for få til sikre tall" : "");
+    basis.classList.toggle("warn", size.agenter < 100);
+
+    const on = Math.round(size.andel_av_voksne*1000);
+    const cells = document.getElementById("grid").children;
+    for (let i=0;i<cells.length;i++) cells[i].classList.toggle("on", i < on);
+    document.getElementById("grid").setAttribute("aria-label", `${on} av 1000 ruter fylt: ${pct(size.andel_av_voksne)} av voksne`);
+
+    renderDims(per, size.agenter);
+  }catch(e){
+    const el = document.getElementById("err");
+    el.textContent = "Fikk ikke kontakt med panelet. Sjekk at serveren kjører (make serve) og last siden på nytt.";
+    el.hidden = false;
+  }
+}
+
+function renderDims(per, nAgents){
+  const host = document.getElementById("dims");
+  host.innerHTML = "";
+  DIMS.forEach((d, i)=>{
+    const seg = Object.fromEntries(per[i].map(r=>[d.key==="fylke" ? fylkeCode[r.fylke_navn] : r[d.key], r]));
+    let order = d.order;
+    if (d.key==="fylke") order = [...order].sort((a,b)=>(seg[b]?.andel||0)-(seg[a]?.andel||0));
+    const max = Math.max(...order.map(v=>Math.max(seg[v]?.andel||0, base[d.key][v]||0)), 0.0001);
+    const wrap = document.createElement("section");
+    wrap.className = "dim";
+    wrap.innerHTML = `<h3>${d.title}</h3>`;
+    for (const v of order){
+      const s = seg[v]?.andel || 0, b = base[d.key][v] || 0;
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `<span class="lab">${d.label[v] ?? v}</span>
+        <span class="track"><span class="bar" style="width:${(s/max*100).toFixed(2)}%"></span>
+        <span class="refmark" style="left:${(b/max*100).toFixed(2)}%"></span></span>
+        <span class="val">${s ? pct(s) : "–"}</span>`;
+      const idx = b ? s/b : 0;
+      row.dataset.tip = `<strong>${d.label[v] ?? v}</strong><br>Utvalget: ${pct(s)} (${fmt.format(seg[v]?.personer||0)} pers.)<br>Hele befolkningen: ${pct(b)}` +
+        (Object.values(state).some(x=>x.size) && b ? `<br>${idx>=1 ? `<span>${idx.toFixed(1).replace(".",",")} ganger så vanlig</span>` : `${Math.round(idx*100)} % av vanlig nivå`}` : "");
+      wrap.appendChild(row);
+    }
+    host.appendChild(wrap);
+  });
+}
+
+const tip = document.getElementById("tip");
+document.addEventListener("mousemove", e=>{
+  const row = e.target.closest?.(".row");
+  if (!row){ tip.style.opacity = 0; return; }
+  tip.innerHTML = row.dataset.tip; tip.style.opacity = 1;
+  const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8);
+  tip.style.left = x + "px"; tip.style.top = (e.clientY + 14) + "px";
+});
+document.getElementById("reset").onclick = () => {
+  for (const s of Object.values(state)) s.clear();
+  renderFilters(); refresh();
+};
+init().catch(()=>{
+  const el = document.getElementById("err");
+  el.textContent = "Fikk ikke kontakt med panelet. Sjekk at serveren kjører (make serve) og last siden på nytt.";
+  el.hidden = false;
+});
+</script>
+</body>
+</html>
