@@ -218,10 +218,13 @@ def build() -> dict:
     from synthpanel.media import layer as media
     a = media.attach(a, rng)
     media_cols = [c for c in media.COLUMNS if c in a.columns]
+    from synthpanel.leisure import layer as leisure
+    a = leisure.attach(a, rng)
+    leisure_cols = [c for c in [*leisure.COLUMNS, leisure.FREQ_COL] if c in a.columns]
     a.insert(0, "agent_id", [f"NO-{i:06d}" for i in range(len(a))])
     a = a[["agent_id", "kommune", "kommune_navn", "fylke", "fylke_navn", "sentralitet",
            "kjonn", "alder", "aldersband", "utdanning", "bakgrunn", "innvkat",
-           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "eierstatus", "boligtype", *value_cols, *pol_cols, *media_cols, "vekt"]]
+           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "eierstatus", "boligtype", *value_cols, *pol_cols, *media_cols, *leisure_cols, "vekt"]]
 
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     a.to_parquet(config.PROCESSED_DIR / "agents.parquet", index=False)

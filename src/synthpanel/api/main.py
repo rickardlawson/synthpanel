@@ -64,6 +64,9 @@ DIMENSIONS = {
 }
 from synthpanel.media.layer import COLUMNS as _MEDIA  # noqa: E402
 DIMENSIONS.update({c: f"Medie/netthandel: {lab} (ja/nei)" for c, lab in _MEDIA.items()})
+from synthpanel.leisure.layer import COLUMNS as _LEISURE  # noqa: E402
+DIMENSIONS.update({c: f"Trening/friluftsliv siste 12 mnd: {lab} (ja/nei)" for c, lab in _LEISURE.items()})
+DIMENSIONS["treningsfrekvens"] = "Hvor ofte de trener: ukentlig, av_og_til (månedlig), sjelden"
 
 
 # Filtermodellen genereres fra DIMENSIONS, så nye dimensjoner bare trenger én linje over.
@@ -351,7 +354,8 @@ def meta():
     out = {}
     for name, path in [("sources", config.RAW_DIR / "manifest.json"),
                        ("build", config.PROCESSED_DIR / "build_report.json"),
-                       ("validation", config.PROCESSED_DIR / "validation_report.json")]:
+                       ("validation", config.PROCESSED_DIR / "validation_report.json"),
+                       ("fasit_kundebarometer", config.PROCESSED_DIR / "fasit_kundebarometer.json")]:
         if path.exists():
             out[name] = json.loads(path.read_text(encoding="utf-8"))
     return out

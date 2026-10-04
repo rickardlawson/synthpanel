@@ -6,6 +6,7 @@ if [ ! -f "$SYNTHPANEL_DATA_DIR/processed/agents.parquet" ]; then
   python -m synthpanel.frame.fetch
   python -m synthpanel.politics.fetch
   python -m synthpanel.media.layer
+  python -m synthpanel.leisure.layer
   if [ -n "$ESS_USER_ID" ]; then python -m synthpanel.values.ess; else echo "ESS_USER_ID ikke satt – bygger uten verdilag"; fi
   python -m synthpanel.frame.build
 fi

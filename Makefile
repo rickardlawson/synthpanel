@@ -1,4 +1,4 @@
-.PHONY: install names portraits fetch fetch-ess build data test validate serve up down rebuild-data
+.PHONY: install fasit names portraits fetch fetch-ess build data test validate serve up down rebuild-data
 
 install:
 	pip install -e ".[dev]"
@@ -7,6 +7,7 @@ fetch:          ## Hent rådata fra SSB og Valgdirektoratet
 	python -m synthpanel.frame.fetch
 	python -m synthpanel.politics.fetch
 	python -m synthpanel.media.layer
+	python -m synthpanel.leisure.layer
 	python -m synthpanel.personas.names
 
 names:          ## Hent navnestatistikk (SSB) til persona-galleriet
@@ -26,6 +27,9 @@ data: fetch fetch-ess build
 
 validate:       ## Testsett: mål verdilaget mot holdte ESS-respondenter
 	python -m synthpanel.values.validate
+
+fasit:          ## Merketest: personaene mot BI Norsk kundebarometer (krever ANTHROPIC_API_KEY)
+	python -m synthpanel.fasit.kundebarometer
 
 test:
 	pytest -q

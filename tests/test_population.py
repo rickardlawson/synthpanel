@@ -254,3 +254,20 @@ def test_media_rates_follow_age(agents):
     share = lambda d: d.loc[d["daglig_tiktok"] == "ja", "vekt"].sum() / d["vekt"].sum()
     assert abs(share(y) - 0.80) < 0.06 and share(o) < 0.05
     assert (agents["netthandel_dagligvarer"] == "ja").mean() > 0.05
+
+
+def test_leisure_matches_ssb_and_gradients(agents):
+    if "friluft_jakt" not in agents.columns:
+        pytest.skip("fritidslag ikke bygget")
+    import pandas as pd
+    from synthpanel import config
+    ka = pd.read_parquet(config.RAW_DIR / "leisure_trening_kjonn_alder_13388.parquet")
+    target = ka[(ka["TreningsAkt"] == "04") & (ka["Kjonn"] == "2") & (ka["Alder"] == "25-44")]["value"].iloc[0] / 100
+    g = agents[(agents["kjonn"] == "kvinne") & agents["alder"].between(25, 44)]
+    share = lambda d, c: d.loc[d[c] == "ja", "vekt"].sum() / d["vekt"].sum()  # noqa: E731
+    assert abs(share(g, "trening_styrke") - target) < 0.03          # treffer SSB per kjønn × alder
+    rural, urban = agents[agents["sentralitet"].isin(["05", "06"])], agents[agents["sentralitet"] == "01"]
+    assert share(rural, "friluft_jakt") > 1.4 * share(urban, "friluft_jakt")   # jakt er distrikt
+    weekly = agents[agents["treningsfrekvens"] == "ukentlig"]
+    rare = agents[agents["treningsfrekvens"] == "sjelden"]
+    assert share(weekly, "trening_lop") > 1.5 * share(rare, "trening_lop")     # aktive gjør mer

@@ -1,0 +1,15 @@
+# Fasit: BI Norsk kundebarometer 2026 – kundetilfredshet (0–100) blant kunder.
+# Kilde: https://www.bi.no/forskning/norsk-kundebarometer/resultater-2026/
+# Utvalg av kjente merker i bransjer med flere konkurrenter, til intern validering
+# av panelet (ikke for videre publisering). Bransje er satt av oss.
+kilde: BI Norsk kundebarometer 2026
+mal: tilfredshet
+merker:
+  dagligvare: {Meny: 75.1, Kiwi: 70.4, Extra: 70.4, REMA 1000: 69.8, Spar: 67.6, Coop Mega: 66.2, Bunnpris: 61.5, Coop Prix: 59.6, Joker: 57.7}
+  bank: {Eika: 78.2, SpareBank 1: 75.0, Handelsbanken: 73.9, Sbanken: 73.0, Nordea: 71.2, DNB: 67.2}
+  mobil: {Ice: 79.7, Talkmore: 76.6, Telenor: 74.0, Telia: 70.0}
+  reise: {Flytoget: 84.2, Ruter: 71.5, SAS: 70.7, Norwegian: 69.9, Widerøe: 69.5, Vy: 60.3}
+  stromming: {Netflix: 65.7, TV2 Play: 65.5, HBO: 65.5, Viaplay: 59.6}
+  bil: {Toyota: 85.9, BMW: 84.5, Volvo: 81.3, Tesla: 79.3, Volkswagen: 76.7}
+  forsikring: {Tryg: 80.6, Gjensidige: 78.8, If: 75.5, Fremtind: 74.0}
+  digitalt: {Vipps: 87.9, Finn.no: 83.8, Komplett.no: 82.6, Zalando: 75.2, Wolt: 69.4, Foodora: 67.9}

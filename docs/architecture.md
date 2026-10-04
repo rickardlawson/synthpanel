@@ -17,6 +17,29 @@ verdifulle er ofte **gapet** mellom de to.
 | **L4 Scenariomotor** | Stimulus inn → reaksjon per segment ut, med usikkerhet, volumvekt og spredning over tid (first movers → etternølere) | LLM + kalibrering | Kontrakt i `POST /estimate` |
 | **L5 Mediekobling** | Fersk kontekst fra Signalist (Brands / People / Debates) | Signalist API | Senere – via avtale |
 
+## Fritidslag (trening og friluftsliv)
+
+SSBs levekårsundersøkelse om idrett og friluftsliv (2024): 8 treningsformer
+(13388), 8 friluftsaktiviteter (13372) og treningsfrekvens (13396). Grunnandel
+per kjønn × alder, justert i log-odds for utdanning (13392/13376) og sentralitet
+(13389/13373), dempet (0,6) og begrenset (±1), og deretter forskjøvet så
+kjønn × alder treffer SSB igjen. Aktivitetene trekkes med en felles latent
+aktivitetsfaktor (gaussisk kopula, rho 0,45) – den som løper, styrketrener
+oftere også, og treningsfrekvensen følger samme faktor. Testet: andeler per
+kjønn × alder treffer SSB, jakt er klart mer utbredt i distriktene, og de som
+trener ukentlig driver med flere aktiviteter. Svakhet: rho er satt skjønnsmessig.
+
+## Fasit: merketest mot BI Norsk kundebarometer (L1)
+
+`make fasit` lar de ti personaene for hele befolkningen anslå tilfredshet
+(0–100) med 45 merker i åtte bransjer (dagligvare, bank, mobil, reise,
+strømming, bil, forsikring, digitalt) og sammenligner det vektede snittet med
+BI Norsk kundebarometer 2026 (`configs/fasit/`). Målene er rangkorrelasjon på
+tvers av alle merker, rangkorrelasjon *innen* bransje (hvem slår hvem – det
+viktigste) og snittavvik etter nivåjustering. Rapporten lagres i
+`data/processed/fasit_kundebarometer.json` og vises i `GET /meta`.
+Tallene fra BI brukes kun til intern validering.
+
 ## Verdihierarkiet
 
 Alle egenskaper er ordnet i tre lag, fra det målbare til det dype. Hierarkiet
@@ -258,6 +281,7 @@ Opoint-data avtales eksplisitt før kobling.
 6. Utvidet testsett: Norsk medborgerpanel og publiserte målinger
 7. L3 faste arketyper (latent klasseanalyse på verdilaget)
 8. ✅ L4 v0: still personaene spørsmål, test budskap på tvers av galleriet, samtale med én persona
-8b. L4: kalibrere budskapstesten mot kjente utfall (pilotcasene)
+8b. ✅ Fritidslag (SSB idrett og friluftsliv) og første fasit: merketest mot BI Norsk kundebarometer
+8c. L4: kalibrere budskapstesten mot kjente utfall (pilotcasene)
 9. L4 første scenario ende-til-ende (Tine), målt mot testsettet
 10. L5 kobling til Signalist

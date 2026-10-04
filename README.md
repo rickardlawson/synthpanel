@@ -66,6 +66,7 @@ med personaens profil som grunnlag – ikke målinger.
 make install   # pip install -e ".[dev]"
 make data      # hent fra SSB + bygg populasjon
 make validate  # testsett: verdilaget mot ESS-respondenter panelet ikke har sett
+make fasit     # merketest: personaene mot BI Norsk kundebarometer (krever ANTHROPIC_API_KEY)
 make test
 make serve     # http://localhost:8090 (utforsker) og /docs (API)
 ```
@@ -108,6 +109,8 @@ src/synthpanel/
   values/validate.py        testsett mot holdte ESS-respondenter
   politics/                 valgresultat 2025, velgerstrømmer, deltakelse -> parti per agent
   media/layer.py            sosiale medier, strømming, netthandel
+  leisure/layer.py          trening og friluftsliv (SSB idrett og friluftsliv 2024)
+  fasit/                    validering mot kjente utfall (BI Norsk kundebarometer)
   personas/                 «Ti på gata»: grupperinger, navn (SSB), portrettvalg
   api/main.py               FastAPI
   web/index.html            befolkningsutforskeren (ren HTML/JS, ingen byggesteg)
@@ -125,7 +128,7 @@ noe må skrives om. Port 8090 for å ikke kollidere med Signalist på 8080.
 
 ## Datakilder
 
-Åpne data: 30 SSB-tabeller (inkl. navnestatistikk) pluss Klass 128 (sentralitet), Valgdirektoratets
+Åpne data: 37 SSB-tabeller (inkl. navnestatistikk) pluss Klass 128 (sentralitet), Valgdirektoratets
 resultater for stortingsvalget 2025 (alle kommuner), og European Social
 Survey runde 9–11 (4 154 norske respondenter, 2018–2024). ESS-vilkårene skiller
 mellom forsknings- og kommersiell bruk – avklar før panelet selges. Oversikt over

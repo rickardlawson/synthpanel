@@ -83,7 +83,7 @@ tiers:
   - id: motivasjon
     title: Motivasjonsfaktorer
     lead: Hva de bruker tid, oppmerksomhet og stemme på
-    note: Estimert fra Mediebarometeret, IKT-undersøkelsen, valgresultatet og ESS.
+    note: Estimert fra Mediebarometeret, idretts- og friluftslivsundersøkelsen, IKT-undersøkelsen, valgresultatet og ESS.
     sections:
       - id: medier
         title: Medievaner
@@ -100,6 +100,31 @@ tiers:
           - {key: daglig_tv2play, title: TV 2 Play, binary: daglig}
           - {key: daglig_viaplay, title: Viaplay, binary: daglig}
           - {key: daglig_disney, title: Disney+, binary: daglig}
+
+      - id: fritid
+        title: Trening og friluftsliv
+        estimate: true
+        dims:
+          - key: treningsfrekvens
+            title: Hvor ofte de trener
+            values: {ukentlig: Hver uke, av_og_til: Månedlig, sjelden: Sjelden eller aldri}
+            phrase: "som trener {}"
+          - {key: trening_lop, title: Løping, binary: trening}
+          - {key: trening_styrke, title: Styrketrening, binary: trening}
+          - {key: trening_langrenn, title: Langrenn, binary: trening}
+          - {key: trening_sykkel, title: Sykling, binary: trening}
+          - {key: trening_svom, title: Svømming, binary: trening}
+          - {key: trening_yoga, title: Yoga/pilates, binary: trening}
+          - {key: trening_fotball, title: Fotball, binary: trening}
+          - {key: trening_golf, title: Golf, binary: trening}
+          - {key: friluft_fottur, title: Lang fottur (3 t+), binary: friluft}
+          - {key: friluft_skitur, title: Skitur, binary: friluft}
+          - {key: friluft_alpint, title: Alpint/snowboard, binary: friluft}
+          - {key: friluft_fiske, title: Fisking, binary: friluft}
+          - {key: friluft_jakt, title: Jakt, binary: friluft}
+          - {key: friluft_baer, title: Bær- og sopptur, binary: friluft}
+          - {key: friluft_overnatting, title: Overnatting ute, binary: friluft}
+          - {key: friluft_bat, title: Båttur, binary: friluft}
 
       - id: forbruk
         title: Forbruk og netthandel
@@ -153,3 +178,5 @@ tiers:
 binary_groups:
   daglig: {title: Bruker daglig, phrase: "som bruker {} daglig"}
   netthandel: {title: Har handlet på nett siste år, phrase: "som har kjøpt {} på nett"}
+  trening: {title: Trener med, phrase: "som driver med {}"}
+  friluft: {title: Friluftsliv siste år, phrase: "med {} siste år"}

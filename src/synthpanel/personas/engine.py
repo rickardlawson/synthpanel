@@ -44,6 +44,11 @@ FEATURES = [
         "verdi_apenhet", "verdi_trygghet", "verdi_selvhevdelse", "verdi_fellesskap",
         "tillit", "risikovilje", "klimabekymring", "religiositet")],
     ("politisk_sted", "verdi", "ord", 0.8),
+    ("treningsfrekvens", "motivasjon", "cat", 0.5),
+    *[(c, "motivasjon", "bin", 0.3) for c in (
+        "trening_lop", "trening_styrke", "trening_langrenn", "trening_sykkel", "trening_svom", "trening_yoga",
+        "trening_fotball", "trening_golf", "friluft_fottur", "friluft_skitur", "friluft_alpint", "friluft_fiske",
+        "friluft_jakt", "friluft_baer", "friluft_overnatting", "friluft_bat")],
 ]
 ORDINALS = {"sentralitet": lambda s: (s.astype(int) - 1) / 5, "inntektsdesil": lambda s: (s.astype(int) - 1) / 9,
             "politisk_sted": lambda s: s.map({"venstre": 0.0, "sentrum": 0.5, "høyre": 1.0})}
@@ -104,6 +109,13 @@ MEDIA = {"daglig_facebook": "Facebook", "daglig_instagram": "Instagram", "daglig
          "daglig_netflix": "Netflix", "daglig_tv2play": "TV 2 Play", "daglig_viaplay": "Viaplay", "daglig_disney": "Disney+"}
 SHOP = {"netthandel_dagligvarer": "dagligvarer", "netthandel_klaer": "klær", "netthandel_reiser": "reiser",
         "netthandel_takeaway": "take-away", "netthandel_kosmetikk": "kosmetikk"}
+TRAIN = {"trening_lop": "løping", "trening_styrke": "styrketrening", "trening_langrenn": "langrenn",
+         "trening_sykkel": "sykling", "trening_svom": "svømming", "trening_yoga": "yoga", "trening_fotball": "fotball",
+         "trening_golf": "golf"}
+OUTDOOR = {"friluft_fottur": "lange fotturer", "friluft_skitur": "skiturer", "friluft_alpint": "alpint",
+           "friluft_fiske": "fisking", "friluft_jakt": "jakt", "friluft_baer": "bær- og sopptur",
+           "friluft_overnatting": "overnatting ute", "friluft_bat": "båtturer"}
+FREQ = {"ukentlig": "Trener hver uke", "av_og_til": "Trener av og til", "sjelden": "Trener sjelden eller aldri"}
 VALUES = {"verdi_apenhet": ("åpen for nye ting og opplevelser", "foretrekker det kjente framfor det nye"),
           "verdi_trygghet": ("setter trygghet, orden og tradisjon høyt", "bryr seg lite om tradisjoner og regler"),
           "verdi_selvhevdelse": ("er opptatt av å lykkes og bli lagt merke til", "er lite opptatt av status og suksess"),
@@ -181,6 +193,8 @@ def profile(a: pd.Series, labels: dict) -> dict:
     lab = lambda col: labels.get(col, {}).get(str(a[col]), str(a[col]))  # noqa: E731
     media = [v for c, v in MEDIA.items() if a.get(c) == "ja"]
     shop = [v for c, v in SHOP.items() if a.get(c) == "ja"]
+    train = [v for c, v in TRAIN.items() if a.get(c) == "ja"]
+    outd = [v for c, v in OUTDOOR.items() if a.get(c) == "ja"]
     vote = a.get("parti_2025")
     vote_t = ("Stemte ikke ved valget i 2025" if vote == "stemte_ikke" else "Har ikke stemmerett" if vote == "ikke_stemmerett"
               else f"Stemte {PARTY.get(vote, vote)} i 2025")
@@ -197,6 +211,10 @@ def profile(a: pd.Series, labels: dict) -> dict:
         "motivasjon": [
             ["Daglige medier", joinog(media) if media else "Ingen av de store tjenestene daglig"],
             ["Handler på nett", joinog(shop).capitalize() if shop else "Lite netthandel"],
+            *([["Trening", FREQ.get(a["treningsfrekvens"], "") + (": " + joinog(train) if train else "")]]
+              if "treningsfrekvens" in a else []),
+            *([["Friluftsliv", joinog(outd).capitalize() if outd else "Lite friluftsliv siste år"]]
+              if "friluft_fottur" in a else []),
             ["Politikk", vote_t + (f" · står nærmest {PARTY.get(a['partisympati'], a['partisympati'])}"
                                    if a.get("partisympati") and a.get("partisympati") != vote else "")],
             ["Politisk interesse", "Høy" if a.get("politisk_interesse") == "høy" else "Lav"],
@@ -220,6 +238,15 @@ def story(name: str, a: pd.Series) -> str:
     media = [v for c, v in MEDIA.items() if a.get(c) == "ja"]
     if media:
         s.append(f"Er innom {joinog(media[:4])} hver dag.")
+    train = [v for c, v in TRAIN.items() if a.get(c) == "ja"]
+    outd = [v for c, v in OUTDOOR.items() if a.get(c) == "ja"]
+    if a.get("treningsfrekvens") == "ukentlig" and train:
+        s.append(f"Trener hver uke, mest {joinog(train[:2])}.")
+    elif a.get("treningsfrekvens") == "sjelden":
+        s.append("Trener sjelden.")
+    if outd:
+        s.append(f"Har vært på {joinog(outd[:3])} det siste året." if not {"fisking", "jakt"} & set(outd[:3])
+                 else f"Friluftsliv: {joinog(outd[:3])}.")
     v = values_text(a)
     if v:
         s.append(f"{first} {joinog(v[:3])}.")
@@ -251,7 +278,7 @@ def distinctive(cl: pd.DataFrame, seg: pd.DataFrame, skip: set[str], labels: dic
         a = cl.groupby(col)["vekt"].sum() / wc.sum()
         b = seg.groupby(col)["vekt"].sum() / ws.sum()
         for val, share in a.items():
-            if (col in MEDIA or col in SHOP) and val != "ja":
+            if (col in MEDIA or col in SHOP or col in TRAIN or col in OUTDOOR) and val != "ja":
                 continue
             lift = share / b.get(val, np.nan)
             if share >= 0.45 and lift >= 1.35:
@@ -259,6 +286,12 @@ def distinctive(cl: pd.DataFrame, seg: pd.DataFrame, skip: set[str], labels: dic
                     lab = f"Bruker {MEDIA[col]} daglig"
                 elif col in SHOP:
                     lab = f"Handler {SHOP[col]} på nett"
+                elif col in TRAIN:
+                    lab = f"Driver med {TRAIN[col]}"
+                elif col in OUTDOOR:
+                    lab = f"Friluftsliv: {OUTDOOR[col]}"
+                elif col == "treningsfrekvens":
+                    lab = FREQ.get(str(val), str(val))
                 elif col == "utdanning":
                     lab = {"grunnskole": "Grunnskole som høyeste utdanning", "videregaende": "Videregående som høyeste utdanning",
                            "fagskole": "Fagskoleutdannet", "uh_kort": "Kort høyere utdanning",
@@ -271,8 +304,8 @@ def distinctive(cl: pd.DataFrame, seg: pd.DataFrame, skip: set[str], labels: dic
                     if phrase:
                         lab = phrase.replace("{}", lab if col == "parti_2025" else lab.lower())
                         lab = lab[0].upper() + lab[1:]
-                ctx = labels["_titles"].get(col, col) if col not in MEDIA and col not in SHOP else (
-                    "daglig" if col in MEDIA else "netthandel")
+                ctx = ("daglig" if col in MEDIA else "netthandel" if col in SHOP else "trening" if col in TRAIN
+                       else "friluftsliv" if col in OUTDOOR else labels["_titles"].get(col, col))
                 out.append({"dim": col, "verdi": str(val), "tekst": lab, "kontekst": ctx, "andel": float(share),
                             "lift": float(lift), "lag": tier_of.get(col)})
     out.sort(key=lambda r: -(r["lift"] * r["andel"]))

@@ -156,3 +156,22 @@ def test_personas_respond_without_key(monkeypatch):
     r = client.post("/personas/respond", json={"filters": {}, "modus": "spørsmål", "tekst": "Hei?"})
     assert r.status_code == 503
     assert client.get("/personas/status").json()["språkmodell"] is False
+
+
+def test_brand_benchmark_math(monkeypatch, tmp_path):
+    """Merketesten med attrapp: panel = BI + støy skal gi høy korrelasjon."""
+    import random
+    from synthpanel.fasit import kundebarometer as kb
+    from synthpanel.personas import voice
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    t = kb.truth()
+    bi = dict(zip(t["merke"], t["bi"]))
+
+    def fake(system, messages, max_tokens=500, tools=None, tool_choice=None):
+        rnd = random.Random(system[:40])
+        return {"content": [{"type": "tool_use", "input": {m: round(s - 10 + rnd.gauss(0, 2)) for m, s in bi.items()}}]}
+    monkeypatch.setattr(voice, "_call", fake)
+    monkeypatch.setattr(kb, "REPORT", tmp_path / "r.json")
+    rep = kb.main()
+    assert rep["merker"] == len(t) and rep["spearman_alle"] > 0.8
+    assert rep["snittavvik_justert"] < 3
