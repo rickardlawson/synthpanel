@@ -7,6 +7,20 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_dotenv(path: Path) -> None:
+    """Les KEY=verdi fra .env (uten å overstyre miljøet). Nøkler holdes utenfor git."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip().removeprefix("export ").strip(), v.strip().strip('"').strip("'"))
+
+
+_load_dotenv(ROOT / ".env")
 CONFIG_DIR = Path(os.environ.get("SYNTHPANEL_CONFIG_DIR", ROOT / "configs"))
 DATA_DIR = Path(os.environ.get("SYNTHPANEL_DATA_DIR", ROOT / "data"))
 RAW_DIR = DATA_DIR / "raw"

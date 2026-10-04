@@ -124,3 +124,35 @@ def test_parallel_requests_do_not_mix_results():
     gir gyldige svar med dagens kode.
     """
     assert all(_parallel_over_http(app))
+
+
+# --- Personaene svarer (språkmodellen byttes ut med en attrapp) ----------------
+def _fake_call(system, messages, max_tokens=500, tools=None, tool_choice=None):
+    assert "Du er " in system  # briefen er med
+    if tools:
+        return {"content": [{"type": "tool_use", "name": "reaksjon", "input": {
+            "holdning": 1 if "kvinne" in system else -1, "sitat": "Hm.", "treffer": "", "skurrer": "", "handling": "ingen"}}]}
+    return {"content": [{"type": "text", "text": f"Svar på: {messages[-1]['content']}"}]}
+
+
+def test_personas_respond_and_chat(monkeypatch):
+    from synthpanel.personas import voice
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    monkeypatch.setattr(voice, "_call", _fake_call)
+    f = {"aldersband": ["30-39"]}
+    r = client.post("/personas/respond", json={"filters": f, "modus": "spørsmål", "tekst": "Hei?"}).json()
+    assert len(r["svar"]) >= 5 and all(s["svar"] == "Svar på: Hei?" for s in r["svar"])
+    b = client.post("/personas/respond", json={"filters": f, "modus": "budskap", "tekst": "Kjøp melk"}).json()
+    sm = b["sammendrag"]
+    assert -1 <= sm["vektet_holdning"] <= 1 and sm["andel_positive"] + sm["andel_negative"] == pytest.approx(1)
+    pid = r["svar"][0]["id"]
+    c = client.post("/personas/chat", json={"filters": f, "id": pid,
+                                            "meldinger": [{"role": "user", "content": "Hvem er du?"}]}).json()
+    assert c["svar"] == "Svar på: Hvem er du?"
+
+
+def test_personas_respond_without_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    r = client.post("/personas/respond", json={"filters": {}, "modus": "spørsmål", "tekst": "Hei?"})
+    assert r.status_code == 503
+    assert client.get("/personas/status").json()["språkmodell"] is False

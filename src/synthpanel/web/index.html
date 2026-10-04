@@ -179,6 +179,45 @@
   .skel .ph{animation:pulse 1.2s ease-in-out infinite}
   @keyframes pulse{50%{opacity:.5}}
 
+  /* Spør panelet */
+  :root{--pos:#8FCB9B; --neg:#E3878A}
+  .askp{background:var(--panel-2); border:1px solid var(--rule-2); border-radius:14px; padding:14px 16px; margin:0 0 18px}
+  .askp-top{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px}
+  .askp-top b{font-size:.92rem}
+  .askp textarea{width:100%; min-height:62px; resize:vertical; background:var(--bg); border:1px solid var(--rule-2); border-radius:10px;
+                 padding:10px 12px; color:var(--ink); font:inherit; font-size:.92rem}
+  .askp textarea::placeholder{color:var(--ink-3)}
+  .askp-row{display:flex; align-items:center; gap:12px; margin-top:10px; flex-wrap:wrap}
+  .btn{background:var(--apricot); color:#1b1410; border:0; border-radius:8px; padding:8px 16px; font-weight:600; cursor:pointer; font-size:.88rem}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+  .askp-row .st{color:var(--ink-3); font-size:.8rem}
+  .askp-row .st.warn{color:var(--warn)}
+  .verdict{display:grid; grid-template-columns:auto 1fr; gap:6px 18px; align-items:center; margin:0 0 18px; padding:12px 16px;
+           border:1px solid var(--rule); border-radius:12px}
+  .verdict .score{font-family:var(--mono); font-size:1.9rem; line-height:1}
+  .verdict .dbar{display:flex; height:8px; border-radius:4px; overflow:hidden; background:var(--rule)}
+  .verdict .dbar i{display:block}
+  .verdict small{color:var(--ink-3); font-size:.8rem; grid-column:1/-1}
+  .bubble{position:relative; background:var(--panel-2); border:1px solid var(--rule-2); border-radius:10px; padding:8px 10px;
+          font-size:.84rem; line-height:1.4; color:var(--ink); margin-top:2px}
+  .bubble::before{content:""; position:absolute; left:16px; top:-6px; width:10px; height:10px; background:var(--panel-2);
+                  border-left:1px solid var(--rule-2); border-top:1px solid var(--rule-2); transform:rotate(45deg)}
+  .bubble.wait{color:var(--ink-3)} .bubble.err{color:var(--warn)}
+  .ph .score{position:absolute; right:8px; top:8px; font-family:var(--mono); font-size:.8rem; font-weight:500; border-radius:999px;
+             padding:2px 9px; background:rgba(18,25,27,.85)}
+  .s-pos{color:var(--pos)} .s-neg{color:var(--neg)} .s-neu{color:var(--ink-2)}
+  .react-detail{display:grid; grid-template-columns:110px 1fr; gap:4px 12px; font-size:.86rem; margin:0 0 18px; padding:12px 14px;
+                border:1px solid var(--rule); border-radius:10px}
+  .react-detail dt{color:var(--ink-3)} .react-detail dd{margin:0}
+  .chat{border-top:1px solid var(--rule); margin-top:8px; padding-top:14px}
+  .chat h4{margin:0 0 8px; font-size:.78rem; color:var(--ink-3); letter-spacing:.06em}
+  .msgs{display:flex; flex-direction:column; gap:8px; margin:0 0 10px}
+  .msg{max-width:85%; padding:8px 12px; border-radius:12px; font-size:.9rem; line-height:1.45; white-space:pre-wrap}
+  .msg.user{align-self:flex-end; background:var(--rule-2)}
+  .msg.assistant{align-self:flex-start; background:var(--panel-2); border:1px solid var(--rule-2)}
+  .chat form{display:flex; gap:8px}
+  .chat input{flex:1; background:var(--bg); border:1px solid var(--rule-2); border-radius:8px; padding:8px 10px}
+
   dialog.pd{border:1px solid var(--rule-2); background:var(--panel); color:var(--ink); border-radius:18px; padding:0;
             width:min(960px, calc(100vw - 32px)); max-height:calc(100vh - 48px)}
   dialog.pd::backdrop{background:rgba(6,10,11,.7)}
@@ -265,6 +304,16 @@
 
       <div id="tab-personas" role="tabpanel" hidden>
         <p class="gal-note" id="galNote"></p>
+        <div class="askp">
+          <div class="askp-top"><b>Spør de ti</b>
+            <div class="seg" role="group" aria-label="Type" style="margin-left:0">
+              <button data-mode="spørsmål" aria-pressed="true">Still et spørsmål</button><button data-mode="budskap" aria-pressed="false">Test et budskap</button>
+            </div>
+          </div>
+          <textarea id="askText" aria-label="Spørsmål eller budskap" placeholder="F.eks. «Hva tenker du om at Tine lanserer plantebasert yoghurt?»"></textarea>
+          <div class="askp-row"><button class="btn" id="askBtn">Spør panelet</button><span class="st" id="askSt"></span></div>
+        </div>
+        <div id="verdict"></div>
         <div class="gallery" id="gallery"></div>
       </div>
 
@@ -627,7 +676,69 @@ function distPanel(title, items, absolute){
 
 /* ---------- Ti på gata ---------- */
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let PERSONAS = [];
+let PERSONAS = [], RESP = {}, RESP_MODE = null, CHATS = {}, askMode = "spørsmål", LLM = null;
+const scoreTxt = h => (h > 0 ? "+" : h < 0 ? "−" : "±") + Math.abs(h);
+const scoreCls = h => h > 0 ? "s-pos" : h < 0 ? "s-neg" : "s-neu";
+
+function renderAnswer(id){
+  const host = document.querySelector(`.ans[data-id="${id}"]`); if (!host) return;
+  const card = host.closest(".pcard"), ph = card.querySelector(".ph");
+  ph.querySelector(".score")?.remove();
+  const r = RESP[id];
+  if (!r){ host.innerHTML = ""; return; }
+  if (r === "wait"){ host.innerHTML = `<div class="bubble wait">Tenker …</div>`; return; }
+  if (r.feil){ host.innerHTML = `<div class="bubble err">Fikk ikke svar</div>`; return; }
+  if (RESP_MODE === "budskap"){
+    ph.insertAdjacentHTML("beforeend", `<span class="score ${scoreCls(r.holdning)}">${scoreTxt(r.holdning)}</span>`);
+    host.innerHTML = `<div class="bubble">«${esc(r.sitat)}»</div>`;
+  } else host.innerHTML = `<div class="bubble">${esc(r.svar)}</div>`;
+}
+
+function renderVerdict(sm){
+  const v = $("verdict");
+  if (!sm || !sm.antall_svar){ v.innerHTML = ""; return; }
+  const h = sm.vektet_holdning, neu = Math.max(0, 1 - sm.andel_positive - sm.andel_negative);
+  v.innerHTML = `<div class="verdict"><span class="score ${scoreCls(h)}">${(h > 0 ? "+" : h < 0 ? "−" : "") + Math.abs(h).toFixed(1).replace(".", ",")}</span>
+    <div><div style="font-size:.88rem;margin-bottom:6px">${pct(sm.andel_positive)} positive · ${pct(neu)} nøytrale · ${pct(sm.andel_negative)} negative</div>
+    <div class="dbar"><i style="width:${sm.andel_negative*100}%;background:var(--neg)"></i><i style="width:${neu*100}%;background:var(--ink-3)"></i><i style="width:${sm.andel_positive*100}%;background:var(--pos)"></i></div></div>
+    <small>Holdning fra −2 til +2, vektet med hvor stor hver gruppering er. AI-simulerte reaksjoner fra ${sm.antall_svar} personas – en indikasjon på hvordan gruppene resonnerer, ikke en måling.</small></div>`;
+}
+
+async function askPanel(){
+  const tekst = $("askText").value.trim();
+  if (tekst.length < 2 || !PERSONAS.length) return;
+  RESP_MODE = askMode; $("verdict").innerHTML = "";
+  for (const p of PERSONAS){ RESP[p.id] = "wait"; renderAnswer(p.id); }
+  $("askBtn").disabled = true; $("askSt").className = "st"; $("askSt").textContent = "Personaene svarer – tar 10–30 sekunder …";
+  try {
+    const r = await fetch("/personas/respond", {method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({filters: filters(), modus: askMode, tekst})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || r.status);
+    for (const a of d.svar) RESP[a.id] = a;
+    PERSONAS.forEach(p => renderAnswer(p.id));
+    if (askMode === "budskap") renderVerdict(d.sammendrag);
+    $("askSt").textContent = `Svar fra ${d.modell}. AI-simulert – ikke en måling.`;
+  } catch(e){
+    RESP = {}; PERSONAS.forEach(p => renderAnswer(p.id));
+    $("askSt").className = "st warn"; $("askSt").textContent = String(e.message || e);
+  } finally { $("askBtn").disabled = !LLM; }
+}
+
+async function initAsk(){
+  try { LLM = (await get("/personas/status")).språkmodell; } catch(e){ LLM = false; }
+  $("askBtn").disabled = !LLM;
+  if (!LLM){ $("askSt").className = "st warn"; $("askSt").textContent = "Språkmodell ikke satt opp: legg ANTHROPIC_API_KEY i .env og start serveren på nytt."; }
+  document.querySelectorAll(".askp .seg button").forEach(b => b.onclick = () => {
+    askMode = b.dataset.mode;
+    document.querySelectorAll(".askp .seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    $("askText").placeholder = askMode === "budskap" ? "Lim inn budskapet, f.eks. «Nå kommer Tine Plant – like god, bare uten melk.»"
+                                                     : "F.eks. «Hva tenker du om at Tine lanserer plantebasert yoghurt?»";
+    $("askBtn").textContent = askMode === "budskap" ? "Test budskapet" : "Spør panelet";
+  });
+  $("askBtn").onclick = askPanel;
+  $("askText").addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) askPanel(); });
+}
 async function renderPersonas(fp, my){
   const g = $("gallery");
   if (!g.children.length || g.dataset.key !== JSON.stringify(fp)){
@@ -635,6 +746,7 @@ async function renderPersonas(fp, my){
   }
   const d = await get("/population/personas", fp);
   if (my !== seq) return;
+  if (g.dataset.key !== JSON.stringify(fp)){ RESP = {}; RESP_MODE = null; $("verdict").innerHTML = ""; CHATS = {}; }
   g.dataset.key = JSON.stringify(fp);
   PERSONAS = d.personas;
   if (!PERSONAS.length){
@@ -651,9 +763,11 @@ async function renderPersonas(fp, my){
       <div class="share">${pct(p.andel)}<i><b style="width:${(p.andel / maxA * 100).toFixed(0)}%"></b></i></div>
       <div class="nm">${esc(p.navn)} <span>${p.alder}</span></div>
       <div class="ttl">${esc(p.tittel)}</div>
-      <div class="tr">${p.kjennetegn.slice(0, 2).map(k => `<span>${tdot(k.dim)}${esc(k.tekst)}</span>`).join("")}</div>`;
+      <div class="tr">${p.kjennetegn.slice(0, 2).map(k => `<span>${tdot(k.dim)}${esc(k.tekst)}</span>`).join("")}</div>
+      <div class="ans" data-id="${p.id}"></div>`;
     b.onclick = () => openPersona(i);
     g.appendChild(b);
+    renderAnswer(p.id);
   });
 }
 
@@ -667,18 +781,28 @@ function openPersona(i){
         <div><div class="bign">${fmt.format(p.personer)}</div>personer i Norge ligner på ${esc(p.navn.split(" ")[0])} – ${pct(p.andel)} av utvalget</div>
         <div>Gruppering ${p.rang} av ${PERSONAS.length}. Bygger på ${fmt.format(p.agenter_i_gruppen)} syntetiske personer.</div>
         <div class="pd-actions">
-          <button disabled>Still et spørsmål</button><button disabled>Test et budskap</button>
+          <button id="pdChat" ${LLM ? "" : "disabled"}>Snakk med ${esc(p.navn.split(" ")[0])}</button>
           <button id="pdCopy">Kopier persona-brief</button>
-          <span class="hint">Samtale og budskapstest kommer i neste steg (krever språkmodell). Briefen kan limes inn i Claude allerede nå.</span>
+          ${LLM ? "" : `<span class="hint">Samtale krever ANTHROPIC_API_KEY i .env.</span>`}
         </div>
       </div></div>
     <div class="pd-main">
       <h2 id="pdName">${esc(p.navn)} <span>${p.alder} år</span></h2>
       <div class="ttl">${esc(p.tittel)} · ${esc(p.sted)}</div>
       <p class="story">${esc(p.historie)}</p>
+      ${RESP_MODE === "budskap" && RESP[p.id] && RESP[p.id].sitat ? (r => `<h4 style="margin:0 0 8px;font-size:.78rem;color:var(--ink-3);letter-spacing:.06em">REAKSJON PÅ BUDSKAPET</h4>
+      <dl class="react-detail"><dt>Holdning</dt><dd class="${scoreCls(r.holdning)}">${scoreTxt(r.holdning)}</dd>
+        <dt>Sier</dt><dd>«${esc(r.sitat)}»</dd>${r.treffer ? `<dt>Treffer</dt><dd>${esc(r.treffer)}</dd>` : ""}
+        ${r.skurrer ? `<dt>Skurrer</dt><dd>${esc(r.skurrer)}</dd>` : ""}<dt>Handling</dt><dd>${esc(r.handling)}</dd></dl>`)(RESP[p.id]) : ""}
+      ${RESP_MODE === "spørsmål" && RESP[p.id] && RESP[p.id].svar ? `<dl class="react-detail"><dt>Svar</dt><dd>${esc(RESP[p.id].svar)}</dd></dl>` : ""}
       ${p.kjennetegn.length ? `<h4 style="margin:0 0 8px;font-size:.78rem;color:var(--ink-3);letter-spacing:.06em">TYPISK FOR GRUPPERINGEN</h4>
       <div class="pd-traits">${p.kjennetegn.map(k => `<span>${tdot(k.dim)}${esc(k.tekst)}<small>${pct(k.andel)}</small></span>`).join("")}</div>` : ""}
       ${tiers}
+      <div class="chat" id="pdChatBox" ${CHATS[p.id] ? "" : "hidden"}>
+        <h4>SAMTALE MED ${esc(p.navn.split(" ")[0]).toUpperCase()} · AI-SIMULERT</h4>
+        <div class="msgs" id="pdMsgs"></div>
+        <form id="pdForm"><input id="pdInput" placeholder="Spør ${esc(p.navn.split(" ")[0])} om noe …" autocomplete="off" aria-label="Melding"><button class="btn">Send</button></form>
+      </div>
     </div></div>
     <button class="pd-close" aria-label="Lukk">×</button>`;
   dlg.querySelector(".pd-close").onclick = () => dlg.close();
@@ -686,8 +810,27 @@ function openPersona(i){
     try { await navigator.clipboard.writeText(p.brief); e.target.textContent = "Kopiert"; } catch(_){ e.target.textContent = "Kunne ikke kopiere"; }
   };
   dlg.onclick = e => { if (e.target === dlg) dlg.close(); };
+  const box = dlg.querySelector("#pdChatBox"), msgs = dlg.querySelector("#pdMsgs");
+  const draw = () => { msgs.innerHTML = (CHATS[p.id] || []).map(m => `<div class="msg ${m.role}">${esc(m.content)}</div>`).join(""); msgs.lastElementChild?.scrollIntoView({block: "nearest"}); };
+  draw();
+  dlg.querySelector("#pdChat").onclick = () => { CHATS[p.id] ??= []; box.hidden = false; dlg.querySelector("#pdInput").focus(); box.scrollIntoView({block: "nearest"}); };
+  dlg.querySelector("#pdForm").onsubmit = async e => {
+    e.preventDefault();
+    const inp = dlg.querySelector("#pdInput"), text = inp.value.trim(); if (!text) return;
+    const hist = (CHATS[p.id] ??= []); hist.push({role: "user", content: text}); inp.value = ""; draw();
+    msgs.insertAdjacentHTML("beforeend", `<div class="msg assistant" id="pdWait" style="color:var(--ink-3)">…</div>`);
+    try {
+      const r = await fetch("/personas/chat", {method: "POST", headers: {"content-type": "application/json"},
+        body: JSON.stringify({filters: filters(), id: p.id, meldinger: hist})});
+      const d = await r.json(); if (!r.ok) throw new Error(d.detail || r.status);
+      hist.push({role: "assistant", content: d.svar});
+      draw();
+    } catch(err){ hist.pop(); inp.value = text; draw(); alertInline(msgs, String(err.message || err)); }
+  };
   dlg.showModal();
 }
+
+function alertInline(host, text){ host.insertAdjacentHTML("beforeend", `<div class="msg assistant" style="color:var(--warn)">${esc(text)}</div>`); }
 
 /* ---------- Faner, nivå, verktøytips ---------- */
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
@@ -710,6 +853,7 @@ document.addEventListener("mousemove", e => {
   tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px";
   tip.style.top = (e.clientY + 14) + "px";
 });
+initAsk();
 init().catch(() => { $("err").textContent = "Fikk ikke kontakt med panelet. Sjekk at serveren kjører (make serve)."; $("err").hidden = false; });
 </script>
 </body>

@@ -47,6 +47,19 @@ echo "ESS_USER_ID=din-id-her" > .env
 
 Uten ID bygges panelet som før, bare uten verdier og holdninger.
 
+**Språkmodell (spørsmål, budskapstest og samtale med personaene):** lag en
+API-nøkkel på https://console.anthropic.com og legg den i samme `.env`:
+
+```bash
+echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
+```
+
+Start serveren på nytt. I fanen «Ti på gata» kan du da stille alle ti samme
+spørsmål, teste et budskap (holdning −2…+2, vektet med gruppenes størrelse)
+eller åpne en persona og snakke med den. Modell kan overstyres med
+`SYNTHPANEL_MODEL` (standard `claude-sonnet-5-5`). Svarene er AI-simuleringer
+med personaens profil som grunnlag – ikke målinger.
+
 **Lokalt (utvikling):**
 
 ```bash

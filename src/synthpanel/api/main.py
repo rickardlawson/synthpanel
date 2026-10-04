@@ -254,11 +254,90 @@ def personas(f: Annotated[PersonaParams, Query()]):
     """«Ti på gata»: de største grupperingene i utvalget, hver vist som én representativ
     syntetisk person med navn, AI-generert portrett og profil etter verdihierarkiet.
     Grupperingene dekker til sammen hele utvalget (`andel` summerer til 1)."""
+    return _get_personas(f)
+
+
+def _get_personas(f: PersonaParams) -> dict:
     cond, params, filtered = _cond(f)
     key = json.dumps(sorted((c, sorted(map(str, getattr(f, c)))) for c in filtered), ensure_ascii=False)
     from synthpanel.personas import portraits
     stamp = portraits.DIR.stat().st_mtime if portraits.DIR.exists() else 0.0  # nye portretter -> nytt valg
     return _personas_cached(key, f.n, cond, tuple(params), tuple(sorted(filtered)), stamp)
+
+
+# ---------------------------------------------------------------------------
+# L4 v0 – personaene svarer (krever ANTHROPIC_API_KEY)
+# ---------------------------------------------------------------------------
+class PanelRequest(BaseModel):
+    filters: dict[str, list[str]] = Field(default_factory=dict, examples=[{"kjonn": ["kvinne"], "aldersband": ["67-79"]}])
+    ids: list[str] | None = Field(None, description="Hvilke personas (agent-id). Tomt = alle i galleriet")
+    modus: str = Field("spørsmål", pattern="^(spørsmål|budskap)$")
+    tekst: str = Field(..., min_length=2, max_length=2000, examples=["Hva tenker du om plantebasert yoghurt fra Tine?"])
+
+
+class ChatMessage(BaseModel):
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., max_length=4000)
+
+
+class ChatRequest(BaseModel):
+    filters: dict[str, list[str]] = Field(default_factory=dict)
+    id: str
+    meldinger: list[ChatMessage] = Field(..., min_length=1, max_length=40)
+
+
+def _panel(filters: dict[str, list[str]]) -> list[dict]:
+    bad = [k for k in filters if k not in DIMENSIONS]
+    if bad:
+        raise HTTPException(422, f"Ukjente filtre: {bad}")
+    return _get_personas(PersonaParams(**filters))["personas"]
+
+
+def _voice_errors(fn):
+    from synthpanel.personas import voice
+    try:
+        return fn()
+    except voice.NoApiKey as e:
+        raise HTTPException(503, "Språkmodell er ikke satt opp: legg ANTHROPIC_API_KEY i .env og start serveren på nytt.") from e
+    except RuntimeError as e:
+        raise HTTPException(502, str(e)) from e
+
+
+@app.get("/personas/status")
+def personas_status():
+    """Om personaene kan svare (språkmodell konfigurert)."""
+    import os
+    from synthpanel.personas import voice
+    return {"språkmodell": bool(os.environ.get("ANTHROPIC_API_KEY")), "modell": voice._model()}
+
+
+@app.post("/personas/respond")
+def personas_respond(req: PanelRequest):
+    """Still alle personaene samme spørsmål (`modus=spørsmål`) eller test et budskap
+    (`modus=budskap`: holdning −2…+2, sitat, hva treffer/skurrer, sannsynlig handling).
+    Svarene er AI-simuleringer med personaens profil som grunnlag – ikke målinger."""
+    from synthpanel.personas import voice
+    ps = _panel(req.filters)
+    if req.ids:
+        ps = [p for p in ps if p["id"] in set(req.ids)]
+    if not ps:
+        raise HTTPException(404, "Ingen personas for dette utvalget.")
+    fn = voice.ask if req.modus == "spørsmål" else voice.react
+    svar = _voice_errors(lambda: voice.run_all(ps, fn, req.tekst))
+    out = {"modus": req.modus, "modell": voice._model(), "svar": svar}
+    if req.modus == "budskap":
+        out["sammendrag"] = voice.summarize(ps, svar)
+    return out
+
+
+@app.post("/personas/chat")
+def personas_chat(req: ChatRequest):
+    """Samtale med én persona. Send hele samtalen hittil i `meldinger`."""
+    from synthpanel.personas import voice
+    p = next((p for p in _panel(req.filters) if p["id"] == req.id), None)
+    if p is None:
+        raise HTTPException(404, "Fant ikke personaen i dette utvalget.")
+    return {"id": p["id"], "svar": _voice_errors(lambda: voice.chat(p, [m.model_dump() for m in req.meldinger]))}
 
 
 @app.get("/health")

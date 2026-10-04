@@ -58,6 +58,17 @@ likt i API (`/dimensions`, `lag` på kjennetegn), grensesnitt og persona-profile
 
 Samme utvalg gir alltid samme personas (frø fra filtrene).
 
+### Personaene svarer (L4 v0)
+
+`POST /personas/respond` (spørsmål eller budskap til hele galleriet) og
+`POST /personas/chat` (samtale med én persona). Hver persona spilles av Claude
+med briefen som systemprompt: svar i første person, kort, la livssituasjon og
+verdier styre, ingen stereotypier, ingen fakta som strider mot profilen.
+Budskapstesten returnerer strukturert holdning (−2…+2), sitat, hva som treffer
+og skurrer og sannsynlig handling, og et sammendrag vektet med grupperingenes
+andel. De ti kalles parallelt. Dette er simuleringer – neste steg er å
+kalibrere dem mot kjente utfall (pilotcasene) før tallene brukes som estimat.
+
 **Svakheter:** k-means på blandede data gir grupper som er gode til å
 oppsummere, men ikke nødvendigvis «naturlige» segmenter; verdiene og medievanene
 er koblet til demografien gjennom statistisk matching, så en enkelt persona kan
@@ -246,6 +257,7 @@ Opoint-data avtales eksplisitt før kobling.
 5. Forbruksprofil (SSB forbruksundersøkelse), fritid; Mediebarometer-mikrodata (Sikt)
 6. Utvidet testsett: Norsk medborgerpanel og publiserte målinger
 7. L3 faste arketyper (latent klasseanalyse på verdilaget)
-8. L4: still personaene spørsmål og test budskap på tvers av galleriet (språkmodell med briefen som grunnlag)
+8. ✅ L4 v0: still personaene spørsmål, test budskap på tvers av galleriet, samtale med én persona
+8b. L4: kalibrere budskapstesten mot kjente utfall (pilotcasene)
 9. L4 første scenario ende-til-ende (Tine), målt mot testsettet
 10. L5 kobling til Signalist
