@@ -26,13 +26,20 @@ SETTINGS = ["in a kitchen at home", "on a street in a Norwegian town", "outdoors
             "in a grocery store parking lot", "on a balcony of an apartment block", "in a small workshop"]
 CLOTHES = ["a knitted sweater", "a rain jacket", "a fleece jacket", "a plain t-shirt", "a flannel shirt", "a hoodie",
            "a cardigan", "a casual blazer", "a wool coat", "a work jacket", "a denim jacket", "a simple blouse"]
-EXTRAS = ["", "", "", "wearing glasses, ", "slight smile, ", "neutral expression, ", "tired eyes, ", "freckles, "]
+EXTRAS = ["", "", "", "with glasses, ", "slight smile, ", "neutral expression, ", "tired eyes, ", "freckles, "]
 
 
 def prompt(sex: str, age: int, nationality: str, rng: random.Random) -> str:
     who = "man" if sex == "mann" else "woman"
-    origin = f"{nationality}-Norwegian " if nationality != "Norwegian" else "Norwegian "
-    return (f"RAW candid portrait photo of a {age} year old {origin}{who}, {rng.choice(EXTRAS)}wearing {rng.choice(CLOTHES)}, "
+    # «Somali-Norwegian» trekker mot et nordisk utseende; «of Somali descent» holder opphavet.
+    origin = "Norwegian " if nationality == "Norwegian" else ""
+    # Modellen gjør middelaldrende kvinner for unge – gi tydelige alderstegn.
+    cue = ("" if age < 40 else "middle-aged, natural skin texture, fine wrinkles, " if age < 58
+           else "older, wrinkled skin, " if age < 75 else "elderly, deeply wrinkled skin, ")
+    shown = {"Somali": "Somali (Black, East African)", "Eritrean": "Eritrean (Black, East African)",
+             "Ethiopian": "Ethiopian (Black, East African)", "Nigerian": "Nigerian (Black, West African)"}.get(nationality, nationality)
+    descent = "" if nationality == "Norwegian" else f" of {shown} descent, living in Norway"
+    return (f"RAW candid portrait photo of a {age} year old {origin}{who}{descent}, {cue}{rng.choice(EXTRAS)}wearing {rng.choice(CLOTHES)}, "
             f"{rng.choice(SETTINGS)}, overcast natural light, head and shoulders, looking at camera, "
             f"ordinary everyday person, 50mm, sharp focus, film grain")
 
