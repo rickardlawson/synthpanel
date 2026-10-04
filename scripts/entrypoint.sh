@@ -9,4 +9,7 @@ if [ ! -f "$SYNTHPANEL_DATA_DIR/processed/agents.parquet" ]; then
   if [ -n "$ESS_USER_ID" ]; then python -m synthpanel.values.ess; else echo "ESS_USER_ID ikke satt – bygger uten verdilag"; fi
   python -m synthpanel.frame.build
 fi
+if [ ! -f "$SYNTHPANEL_DATA_DIR/raw/names_first_10467.parquet" ]; then
+  python -m synthpanel.personas.names || echo "Fikk ikke hentet navnestatistikk – personas bruker reserveliste"
+fi
 exec uvicorn synthpanel.api.main:app --host 0.0.0.0 --port "${PORT:-8090}"

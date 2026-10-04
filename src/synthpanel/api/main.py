@@ -128,13 +128,20 @@ def dimension_config() -> dict:
     return config.load("dimensions")
 
 
+def config_sections() -> list[dict]:
+    """Alle seksjoner i hierarkiets rekkefølge, hver merket med laget (tier) den hører til."""
+    return [{**sec, "tier": t["id"]} for t in dimension_config()["tiers"] for sec in t["sections"]]
+
+
 @app.get("/dimensions")
 def dimensions():
-    """Seksjoner, dimensjoner og etiketter som grensesnittet bygges fra."""
+    """Verdihierarkiet (lag → seksjoner → dimensjoner) og etiketter som grensesnittet bygges fra.
+    `sections` er den samme lista flatet ut, med `tier` på hver seksjon."""
     cfg = dimension_config()
-    out = {"sections": [], "binary_groups": cfg.get("binary_groups", {})}
+    out = {"tiers": [{k: v for k, v in t.items() if k != "sections"} for t in cfg["tiers"]],
+           "sections": [], "binary_groups": cfg.get("binary_groups", {})}
     cols = set(_con().execute("SELECT * FROM agents LIMIT 0").df().columns)
-    for sec in cfg["sections"]:
+    for sec in config_sections():
         dims = []
         for d in sec["dims"]:
             if d["key"] not in cols:
@@ -192,7 +199,7 @@ def profile(f: Annotated[ProfileParams, Query()]):
     if not seg_total:
         return {"over": [], "under": [], "agenter": 0}
     over, under = [], []
-    for sec in dimension_config()["sections"]:
+    for sec in config_sections():
         for d in sec["dims"]:
             key = d["key"]
             geo_filtered = bool({"fylke", "kommune", "sentralitet"} & set(filtered))
@@ -206,7 +213,7 @@ def profile(f: Annotated[ProfileParams, Query()]):
                     continue
                 a_seg, a_pop = s / seg_total, p / total
                 lift = a_seg / a_pop if a_pop else 0
-                item = {"dim": key, "seksjon": sec["id"], "verdi": val, "andel_segment": a_seg,
+                item = {"dim": key, "seksjon": sec["id"], "lag": sec["tier"], "verdi": val, "andel_segment": a_seg,
                         "andel_befolkning": a_pop, "lift": lift, "personer": round(s)}
                 if a_seg >= f.min_andel and lift >= 1.2:
                     over.append(item)
@@ -216,6 +223,40 @@ def profile(f: Annotated[ProfileParams, Query()]):
     under.sort(key=lambda r: r["lift"])
     return {"over": over[: f.limit], "under": under[: f.limit], "agenter": n,
             "presisjon": _precision_note(n)}
+
+
+class PersonaParams(Filters):
+    n: int = Field(10, ge=1, le=12, description="Antall personas (største grupperinger)")
+
+
+def _labels() -> dict:
+    out = {"_titles": {}, "_phrases": {}}
+    for sec in config_sections():
+        for d in sec["dims"]:
+            out["_titles"][d["key"]] = d["title"]
+            if d.get("phrase"):
+                out["_phrases"][d["key"]] = d["phrase"]
+            if isinstance(d.get("values"), dict):
+                out[d["key"]] = d["values"]
+    return out
+
+
+@lru_cache(maxsize=256)
+def _personas_cached(key: str, n: int, cond: str, params: tuple, filtered: tuple) -> dict:
+    from synthpanel.personas import engine
+    seg = _con().execute(f"SELECT * FROM agents WHERE {cond}", list(params)).df()
+    tiers = {d["key"]: s["tier"] for s in config_sections() for d in s["dims"]}
+    return engine.build(seg, set(filtered), _labels(), tiers, key, k=n)
+
+
+@app.get("/population/personas")
+def personas(f: Annotated[PersonaParams, Query()]):
+    """«Ti på gata»: de største grupperingene i utvalget, hver vist som én representativ
+    syntetisk person med navn, AI-generert portrett og profil etter verdihierarkiet.
+    Grupperingene dekker til sammen hele utvalget (`andel` summerer til 1)."""
+    cond, params, filtered = _cond(f)
+    key = json.dumps(sorted((c, sorted(map(str, getattr(f, c)))) for c in filtered), ensure_ascii=False)
+    return _personas_cached(key, f.n, cond, tuple(params), tuple(sorted(filtered)))
 
 
 @app.get("/health")

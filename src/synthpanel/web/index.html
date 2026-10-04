@@ -15,6 +15,8 @@
     --ink:#E8EEEC; --ink-2:#A9B6B5; --ink-3:#71807F;
     --fjord:#7FB6D9; --apricot:#F0A27A; --up:#F0A27A; --down:#7FB6D9;
     --warn:#E6B566; --focus:#F0A27A;
+    /* Verdihierarkiet: tre lag med hver sin farge */
+    --t-hygiene:#7FB6D9; --t-motivasjon:#F0A27A; --t-verdi:#C4A8EE;
     --mono:"JetBrains Mono", ui-monospace, monospace;
   }
   *{box-sizing:border-box}
@@ -42,7 +44,7 @@
   .ask small{color:var(--ink-3); font-size:.78rem}
   .ask p{margin:4px 0 0; font-size:1.18rem; line-height:1.35; font-weight:500; text-wrap:balance}
   .chips{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px}
-  .chip{display:inline-flex; align-items:center; gap:6px; background:var(--panel-2); border:1px solid var(--rule-2);
+  .chip{display:inline-flex; align-items:center; gap:5px; background:var(--panel-2); border:1px solid var(--rule-2);
         border-radius:999px; padding:3px 6px 3px 11px; font-size:.82rem}
   .chip i{font-style:normal; color:var(--ink-3)}
   .chip button{border:0; background:none; cursor:pointer; color:var(--ink-3); width:20px; height:20px; border-radius:50%;
@@ -63,9 +65,20 @@
   .sugg div[aria-selected="true"], .sugg div:hover{background:var(--rule)}
   .sugg .empty{color:var(--ink-3); cursor:default}
 
+  .tier{position:relative; margin:0 0 14px; padding:0 0 0 14px}
+  .tier::before{content:""; position:absolute; left:0; top:4px; bottom:4px; width:3px; border-radius:3px; background:var(--tc); opacity:.85}
+  .tier-head{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:6px 0 10px}
+  .tier-num{width:22px; height:22px; border-radius:50%; border:1.5px solid var(--tc); color:var(--tc); display:grid; place-items:center;
+            font-family:var(--mono); font-size:.72rem; font-weight:500}
+  .tier-head b{display:block; font-size:.74rem; letter-spacing:.09em; text-transform:uppercase; color:var(--tc); font-weight:600}
+  .tier-head small{display:block; color:var(--ink-2); font-size:.86rem; line-height:1.3}
+  .tier-head .cnt{color:var(--tc); font-size:.78rem; white-space:nowrap}
+  .tier .sec > button{font-size:.95rem}
+  .tdot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--tc); margin-right:7px; flex:none;
+        position:relative; top:-1px}
   .sec{border-top:1px solid var(--rule)}
   .sec > button{width:100%; display:flex; justify-content:space-between; align-items:center; background:none; border:0;
-                padding:12px 2px; cursor:pointer; font-weight:600; text-align:left}
+                padding:10px 2px; cursor:pointer; font-weight:600; text-align:left}
   .sec > button .meta{color:var(--ink-3); font-weight:400; font-size:.8rem}
   .sec > button .chev{display:inline-block; transition:transform .15s; color:var(--ink-3)}
   .sec[data-open="true"] > button .chev{transform:rotate(90deg)}
@@ -77,13 +90,13 @@
   .dimrow > button:hover{background:var(--panel)}
   .dimrow > button .sum{color:var(--ink-3); font-size:.84rem; text-align:right; overflow:hidden; text-overflow:ellipsis;
                         white-space:nowrap; max-width:55%}
-  .dimrow > button .sum.on{color:var(--apricot)}
+  .dimrow > button .sum.on{color:var(--tc, var(--apricot))}
   .opts{display:none; padding:4px 8px 10px 10px; columns:2; column-gap:14px}
   .dimrow[data-open="true"] .opts{display:block}
   .dimrow[data-open="true"] > button{background:var(--panel)}
   .opts label{display:flex; gap:8px; align-items:center; padding:3px 0; break-inside:avoid; cursor:pointer; font-size:.88rem;
               color:var(--ink-2)}
-  .opts input{accent-color:var(--apricot); width:15px; height:15px; margin:0}
+  .opts input{accent-color:var(--tc, var(--apricot)); width:15px; height:15px; margin:0}
   .opts label:has(input:checked){color:var(--ink)}
 
   /* ---------- Høyre: resultat ---------- */
@@ -124,6 +137,12 @@
 
   .dist-sec{margin:0 0 26px}
   .dist-sec h4{margin:0 0 10px; font-size:.95rem}
+  .dist-tier{margin:0 0 30px}
+  .dist-tier > h3{display:flex; align-items:baseline; gap:10px; margin:0 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule);
+                  font-size:.78rem; letter-spacing:.09em; text-transform:uppercase; color:var(--tc)}
+  .dist-tier > h3 span{color:var(--ink-3); text-transform:none; letter-spacing:0; font-weight:400; font-size:.84rem}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; color:var(--ink-3); font-size:.8rem; margin:14px 0 0}
+  .legend span{display:inline-flex; align-items:center}
   .dists{display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:22px 30px}
   .dist h5{margin:0 0 6px; font-size:.86rem; font-weight:600; color:var(--ink-2)}
   .drow{display:grid; grid-template-columns:130px minmax(0,1fr) 54px; gap:10px; align-items:center; font-size:.82rem; min-height:22px}
@@ -137,6 +156,60 @@
   .key span{display:inline-flex; gap:6px; align-items:center}
   .key .kb{width:14px; height:6px; border-radius:0 3px 3px 0; background:linear-gradient(90deg, var(--fjord), var(--apricot))}
   .key .kr{width:2px; height:12px; background:var(--ink); opacity:.75}
+
+  /* ---------- Ti på gata ---------- */
+  .gallery{display:grid; grid-template-columns:repeat(auto-fill, minmax(178px, 1fr)); gap:18px}
+  .pcard{background:none; border:0; padding:0; text-align:left; cursor:pointer; color:inherit; display:flex; flex-direction:column; gap:8px}
+  .pcard .ph{position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; background:var(--panel-2); border:1px solid var(--rule)}
+  .pcard img, .pd-img img{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(.92)}
+  .pcard:hover .ph{border-color:var(--rule-2)} .pcard:hover img{filter:none}
+  .ph .rank{position:absolute; left:8px; top:8px; font-family:var(--mono); font-size:.72rem; background:rgba(18,25,27,.78);
+            color:var(--ink); border-radius:999px; padding:2px 8px}
+  .ph .ai{position:absolute; right:8px; bottom:8px; font-size:.64rem; letter-spacing:.06em; background:rgba(18,25,27,.7);
+          color:var(--ink-2); border-radius:4px; padding:1px 5px}
+  .ph .noimg{position:absolute; inset:0; display:grid; place-items:center; font-size:2.4rem; color:var(--ink-3); font-weight:600}
+  .pcard .share{display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:.78rem; color:var(--ink-2)}
+  .pcard .share i{flex:1; height:3px; border-radius:2px; background:var(--rule)}
+  .pcard .share i b{display:block; height:100%; border-radius:2px; background:linear-gradient(90deg, var(--fjord), var(--apricot))}
+  .pcard .nm{font-weight:600; line-height:1.25}
+  .pcard .nm span{color:var(--ink-3); font-weight:400}
+  .pcard .ttl{color:var(--ink-2); font-size:.84rem; line-height:1.3}
+  .pcard .tr{display:flex; flex-direction:column; gap:2px; font-size:.76rem; color:var(--ink-3); line-height:1.3}
+  .gal-note{color:var(--ink-3); font-size:.82rem; margin:0 0 16px; max-width:80ch}
+  .skel .ph{animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.5}}
+
+  dialog.pd{border:1px solid var(--rule-2); background:var(--panel); color:var(--ink); border-radius:18px; padding:0;
+            width:min(960px, calc(100vw - 32px)); max-height:calc(100vh - 48px)}
+  dialog.pd::backdrop{background:rgba(6,10,11,.7)}
+  .pd-in{display:grid; grid-template-columns:300px minmax(0,1fr); max-height:calc(100vh - 50px)}
+  .pd-img{position:relative; background:var(--panel-2)}
+  .pd-img img{height:auto; aspect-ratio:1}
+  .pd-img .ai{position:absolute; left:10px; bottom:10px; font-size:.66rem; letter-spacing:.06em; background:rgba(18,25,27,.7);
+              color:var(--ink-2); border-radius:4px; padding:2px 6px}
+  .pd-side{padding:18px 20px; display:flex; flex-direction:column; gap:10px; font-size:.84rem; color:var(--ink-2)}
+  .pd-side .bign{font-family:var(--mono); font-size:1.6rem; color:var(--ink); line-height:1}
+  .pd-main{padding:22px 26px 26px; overflow-y:auto}
+  .pd-main h2{margin:0; font-size:1.5rem; letter-spacing:-.01em}
+  .pd-main h2 span{color:var(--ink-3); font-weight:400}
+  .pd-main .ttl{color:var(--apricot); margin:2px 0 12px}
+  .pd-main .story{margin:0 0 18px}
+  .pd-close{position:absolute; right:12px; top:10px; background:rgba(23,32,35,.85); border:0; z-index:2; color:var(--ink-3); font-size:1.5rem; cursor:pointer;
+            width:34px; height:34px; border-radius:50%}
+  .pd-close:hover{background:var(--rule); color:var(--ink)}
+  .pd-tier{margin:0 0 16px; padding-left:12px; border-left:3px solid var(--tc)}
+  .pd-tier h4{margin:0 0 6px; font-size:.72rem; letter-spacing:.09em; text-transform:uppercase; color:var(--tc)}
+  .pd-tier dl{display:grid; grid-template-columns:minmax(120px, 34%) 1fr; gap:3px 14px; margin:0; font-size:.88rem}
+  .pd-tier dt{color:var(--ink-3)} .pd-tier dd{margin:0}
+  .pd-traits{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 18px}
+  .pd-traits span{display:inline-flex; align-items:center; border:1px solid var(--rule-2); border-radius:999px; padding:3px 10px; font-size:.8rem}
+  .pd-traits small{color:var(--ink-3); margin-left:6px; font-family:var(--mono)}
+  .pd-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px}
+  .pd-actions button{background:none; border:1px solid var(--rule-2); color:var(--ink); border-radius:8px; padding:7px 12px; cursor:pointer; font-size:.84rem}
+  .pd-actions button:hover:not(:disabled){border-color:var(--apricot)}
+  .pd-actions button:disabled{color:var(--ink-3); cursor:not-allowed}
+  .pd-actions .hint{color:var(--ink-3); font-size:.78rem; width:100%}
+  @media (max-width:760px){ .pd-in{grid-template-columns:1fr; overflow-y:auto} .pd-main{overflow:visible} .pd-img img{max-height:340px} }
 
   .tip{position:fixed; pointer-events:none; background:var(--ink); color:var(--bg); font-size:.8rem; padding:7px 10px;
        border-radius:6px; max-width:260px; z-index:30; opacity:0; transition:opacity .1s}
@@ -184,9 +257,15 @@
       <p class="story" id="story"></p>
 
       <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="false" data-tab="personas">Ti på gata</button>
         <button role="tab" aria-selected="true" data-tab="steder">Steder</button>
         <button role="tab" aria-selected="false" data-tab="kjennetegn">Kjennetegn</button>
         <button role="tab" aria-selected="false" data-tab="fordelinger">Alle fordelinger</button>
+      </div>
+
+      <div id="tab-personas" role="tabpanel" hidden>
+        <p class="gal-note" id="galNote"></p>
+        <div class="gallery" id="gallery"></div>
       </div>
 
       <div id="tab-steder" role="tabpanel">
@@ -208,6 +287,7 @@
           <div class="list"><h3><span>OVERREPRESENTERT</span><span>LIFT</span></h3><div id="over"></div></div>
           <div class="list"><h3><span>UNDERREPRESENTERT</span><span>LIFT</span></h3><div id="under"></div></div>
         </div>
+        <div class="legend" id="profileLegend"></div>
         <p class="note" id="profileNote"></p>
       </div>
 
@@ -219,6 +299,7 @@
     <footer>Tallene er vektede estimater fra 50 751 syntetiske personer kalibrert mot SSB-statistikk. Verdier, politikk og medier er estimert fra spørreundersøkelser (ESS, Valgundersøkelsen, Mediebarometeret) og er mindre presise enn registertallene.</footer>
   </main>
 </div>
+<dialog class="pd" id="pd" aria-labelledby="pdName"></dialog>
 <div class="tip" id="tip" role="tooltip"></div>
 
 <script>
@@ -227,7 +308,7 @@ const pct = v => (v*100).toLocaleString("nb-NO", {maximumFractionDigits: v < 0.0
 const lift = v => v == null ? "–" : v.toFixed(2).replace(".", ",") + "×";
 const $ = id => document.getElementById(id);
 
-let CFG = null, DIMS = [], BYKEY = {}, state = {}, level = "kommune", tab = "steder", totalAdults = 0, valNote = "";
+let CFG = null, TIERS = {}, DIMS = [], BYKEY = {}, state = {}, level = "kommune", tab = "steder", totalAdults = 0, valNote = "";
 let baseDist = {};
 
 async function get(path, params){
@@ -239,14 +320,17 @@ async function get(path, params){
 }
 const filters = () => Object.fromEntries(Object.entries(state).filter(([, s]) => s.size).map(([k, s]) => [k, [...s]]));
 const labelOf = (key, v) => BYKEY[key]?.values?.[v] ?? v;
+const tierColor = key => TIERS[BYKEY[key]?.tier]?.color || "var(--ink-3)";
+const tdot = key => `<i class="tdot" style="--tc:${tierColor(key)}" aria-hidden="true"></i>`;
 const ctxOf = key => BYKEY[key].binary ? CFG.binary_groups[BYKEY[key].binary].title : BYKEY[key].title;
 
 /* ---------- Oppsett ---------- */
 async function init(){
   CFG = await get("/dimensions");
+  CFG.tiers.forEach((t, i) => { t.num = i + 1; t.color = `var(--t-${t.id})`; TIERS[t.id] = t; });
   for (const sec of CFG.sections) for (const d of sec.dims){
     if (d.binary) d.values = {ja: d.title};
-    d.section = sec.id; DIMS.push(d); BYKEY[d.key] = d; state[d.key] = new Set();
+    d.section = sec.id; d.tier = sec.tier; DIMS.push(d); BYKEY[d.key] = d; state[d.key] = new Set();
   }
   totalAdults = (await get("/population/size")).personer;
   try {
@@ -262,13 +346,22 @@ const openState = {secs: {hvem: true}, row: null};
 
 function renderSections(){
   const host = $("sections"); host.innerHTML = "";
+  const tierHosts = {};
+  for (const t of CFG.tiers){
+    const n = DIMS.filter(d => d.tier === t.id && state[d.key].size).length;
+    const el = document.createElement("section");
+    el.className = "tier"; el.style.setProperty("--tc", t.color); el.setAttribute("aria-label", t.title);
+    el.innerHTML = `<div class="tier-head" title="${t.note}"><span class="tier-num">${t.num}</span>
+      <div><b>${t.title}</b><small>${t.lead}</small></div><span class="cnt">${n ? n + " valgt" : ""}</span></div>`;
+    tierHosts[t.id] = el; host.appendChild(el);
+  }
   for (const sec of CFG.sections){
     const el = document.createElement("div");
     el.className = "sec"; el.dataset.open = openState.secs[sec.id] ? "true" : "false";
     const active = sec.dims.filter(d => state[d.key].size).length;
     el.innerHTML = `<button aria-expanded="${el.dataset.open}"><span>${sec.title}</span>
       <span class="meta">${active ? active + " valgt · " : ""}${sec.dims.length} egenskaper <span class="chev" aria-hidden="true">›</span></span></button>
-      <div class="sec-body">${sec.estimate ? `<p class="est">Estimert fra spørreundersøkelser – mindre presist enn registertall.</p>` : ""}</div>`;
+      <div class="sec-body">${sec.estimate ? `<p class="est">${TIERS[sec.tier].note}</p>` : ""}</div>`;
     el.querySelector("button").onclick = () => {
       openState.secs[sec.id] = el.dataset.open !== "true";
       el.dataset.open = String(openState.secs[sec.id]);
@@ -287,7 +380,7 @@ function renderSections(){
       body.appendChild(dimRow("grp-" + g, CFG.binary_groups[g].title, on.length ? on.map(d => d.title).join(", ") : "Alle", !!on.length,
         ds.map(d => [d.title, state[d.key].has("ja"), v => toggle(d.key, "ja", v)])));
     }
-    host.appendChild(el);
+    tierHosts[sec.tier].appendChild(el);
   }
 }
 
@@ -321,7 +414,7 @@ function renderChips(){
   for (const d of DIMS) for (const v of state[d.key]){
     any = true;
     const c = document.createElement("span"); c.className = "chip";
-    c.innerHTML = `${labelOf(d.key, v)} <i>${ctxOf(d.key).toLowerCase()}</i>`;
+    c.innerHTML = `${tdot(d.key)}${labelOf(d.key, v)} <i>${ctxOf(d.key).toLowerCase()}</i>`;
     const b = document.createElement("button"); b.setAttribute("aria-label", `Fjern ${labelOf(d.key, v)}`); b.textContent = "×";
     b.onclick = () => toggle(d.key, v, false);
     c.appendChild(b); host.appendChild(c);
@@ -355,7 +448,7 @@ $("q").addEventListener("input", e => {
   suggItems.forEach((x, i) => {
     const el = document.createElement("div");
     el.setAttribute("role", "option"); el.setAttribute("aria-selected", String(i === 0));
-    el.innerHTML = `${x.label}<span>${x.ctx}${state[x.key].has(x.v) ? " · valgt" : ""}</span>`;
+    el.innerHTML = `<span style="color:inherit;font-size:inherit">${tdot(x.key)}${x.label}</span><span>${x.ctx}${state[x.key].has(x.v) ? " · valgt" : ""}</span>`;
     el.onmousedown = ev => { ev.preventDefault(); pick(i); };
     box.appendChild(el);
   });
@@ -427,6 +520,7 @@ async function refresh(){
     renderProfile(pr);
     renderStory(size, pl, pr, fp);
     if (tab === "fordelinger") await renderDists(fp, my);
+    if (tab === "personas") await renderPersonas(fp, my);
   } catch(e){
     $("err").textContent = "Fikk ikke kontakt med panelet. Sjekk at serveren kjører (make serve) og last siden på nytt.";
     $("err").hidden = false;
@@ -460,12 +554,13 @@ function renderProfile(pr){
     $("profileNote").textContent = ""; return;
   }
   const maxL = Math.max(...pr.over.map(r => r.lift), 1);
-  const row = (r, w) => itemRow(labelOf(r.dim, r.verdi), ctxOf(r.dim).toLowerCase(), pct(r.andel_segment), r.lift, w,
+  const row = (r, w) => itemRow(tdot(r.dim) + labelOf(r.dim, r.verdi), ctxOf(r.dim).toLowerCase(), pct(r.andel_segment), r.lift, w,
     `<strong>${labelOf(r.dim, r.verdi)}</strong> (${ctxOf(r.dim).toLowerCase()})<br>I gruppen: ${pct(r.andel_segment)}<br>I hele befolkningen: ${pct(r.andel_befolkning)}`);
   for (const r of pr.over) o.appendChild(row(r, r.lift / maxL));
   for (const r of pr.under) u.appendChild(row(r, 1 - r.lift));
   if (!pr.over.length) o.innerHTML = `<p class="note">Ingen tydelige forskjeller.</p>`;
   if (!pr.under.length) u.innerHTML = `<p class="note">Ingen tydelige forskjeller.</p>`;
+  $("profileLegend").innerHTML = CFG.tiers.map(t => `<span><i class="tdot" style="--tc:${t.color}"></i>${t.title}</span>`).join("");
   $("profileNote").textContent = "Viser kategorier som utgjør minst 8 % og ligger minst 20 % over eller under landssnittet. Valgte egenskaper er utelatt. " + valNote;
 }
 
@@ -496,6 +591,12 @@ async function renderDists(fp, my){
   const rows = await Promise.all(DIMS.map(d => get("/population/breakdown", {...fp, by: [d.key]})));
   if (my !== seq) return;
   host.innerHTML = "";
+  const tierWraps = {};
+  for (const t of CFG.tiers){
+    const tw = document.createElement("div"); tw.className = "dist-tier"; tw.style.setProperty("--tc", t.color);
+    tw.innerHTML = `<h3>${t.num} · ${t.title} <span>${t.lead}</span></h3>`;
+    tierWraps[t.id] = tw; host.appendChild(tw);
+  }
   for (const sec of CFG.sections){
     const wrap = document.createElement("div"); wrap.className = "dist-sec";
     wrap.innerHTML = `<h4>${sec.title}</h4><div class="dists"></div>`;
@@ -507,7 +608,7 @@ async function renderDists(fp, my){
       grid.appendChild(distPanel(d.title, Object.entries(d.values).map(([v, lab]) => [lab, seg[v] || 0, baseDist[d.key][v] || 0])));
     }
     for (const [g, items] of Object.entries(binaries)) grid.appendChild(distPanel(CFG.binary_groups[g].title, items, true));
-    host.appendChild(wrap);
+    tierWraps[sec.tier].appendChild(wrap);
   }
 }
 function distPanel(title, items, absolute){
@@ -524,12 +625,77 @@ function distPanel(title, items, absolute){
   return el;
 }
 
+/* ---------- Ti på gata ---------- */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let PERSONAS = [];
+async function renderPersonas(fp, my){
+  const g = $("gallery");
+  if (!g.children.length || g.dataset.key !== JSON.stringify(fp)){
+    g.innerHTML = Array.from({length: 10}, () => `<div class="pcard skel"><div class="ph"></div></div>`).join("");
+  }
+  const d = await get("/population/personas", fp);
+  if (my !== seq) return;
+  g.dataset.key = JSON.stringify(fp);
+  PERSONAS = d.personas;
+  if (!PERSONAS.length){
+    g.innerHTML = ""; $("galNote").textContent = d.melding || "Ingen personas for dette utvalget."; return;
+  }
+  $("galNote").textContent = `De ${PERSONAS.length} største grupperingene i ${Object.keys(fp).length ? "utvalget" : "befolkningen"}, som til sammen dekker alle. Hver vises som én av panelets syntetiske personer – den som ligger nærmest midten av sin gruppe. Navn og portrett er generert: personene finnes ikke, men profilene bygger på statistikken.`;
+  const maxA = Math.max(...PERSONAS.map(p => p.andel));
+  g.innerHTML = "";
+  PERSONAS.forEach((p, i) => {
+    const b = document.createElement("button"); b.className = "pcard";
+    b.setAttribute("aria-label", `${p.navn}, ${p.alder} år, ${p.tittel}. ${pct(p.andel)} av utvalget. Åpne profil`);
+    b.innerHTML = `<div class="ph">${p.portrett ? `<img src="${p.portrett}" alt="" loading="lazy">` : `<span class="noimg">${esc(p.navn[0])}</span>`}
+        <span class="rank">${p.rang}</span><span class="ai">AI-GENERERT</span></div>
+      <div class="share">${pct(p.andel)}<i><b style="width:${(p.andel / maxA * 100).toFixed(0)}%"></b></i></div>
+      <div class="nm">${esc(p.navn)} <span>${p.alder}</span></div>
+      <div class="ttl">${esc(p.tittel)}</div>
+      <div class="tr">${p.kjennetegn.slice(0, 2).map(k => `<span>${tdot(k.dim)}${esc(k.tekst)}</span>`).join("")}</div>`;
+    b.onclick = () => openPersona(i);
+    g.appendChild(b);
+  });
+}
+
+function openPersona(i){
+  const p = PERSONAS[i], dlg = $("pd");
+  const tiers = CFG.tiers.map(t => `<section class="pd-tier" style="--tc:${t.color}"><h4>${t.num} · ${t.title}</h4><dl>
+      ${(p.profil[t.id] || []).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></section>`).join("");
+  dlg.innerHTML = `<div class="pd-in">
+    <div><div class="pd-img">${p.portrett ? `<img src="${p.portrett}" alt="AI-generert portrett av ${esc(p.navn)}">` : ""}<span class="ai">AI-GENERERT PORTRETT</span></div>
+      <div class="pd-side">
+        <div><div class="bign">${fmt.format(p.personer)}</div>personer i Norge ligner på ${esc(p.navn.split(" ")[0])} – ${pct(p.andel)} av utvalget</div>
+        <div>Gruppering ${p.rang} av ${PERSONAS.length}. Bygger på ${fmt.format(p.agenter_i_gruppen)} syntetiske personer.</div>
+        <div class="pd-actions">
+          <button disabled>Still et spørsmål</button><button disabled>Test et budskap</button>
+          <button id="pdCopy">Kopier persona-brief</button>
+          <span class="hint">Samtale og budskapstest kommer i neste steg (krever språkmodell). Briefen kan limes inn i Claude allerede nå.</span>
+        </div>
+      </div></div>
+    <div class="pd-main">
+      <h2 id="pdName">${esc(p.navn)} <span>${p.alder} år</span></h2>
+      <div class="ttl">${esc(p.tittel)} · ${esc(p.sted)}</div>
+      <p class="story">${esc(p.historie)}</p>
+      ${p.kjennetegn.length ? `<h4 style="margin:0 0 8px;font-size:.78rem;color:var(--ink-3);letter-spacing:.06em">TYPISK FOR GRUPPERINGEN</h4>
+      <div class="pd-traits">${p.kjennetegn.map(k => `<span>${tdot(k.dim)}${esc(k.tekst)}<small>${pct(k.andel)}</small></span>`).join("")}</div>` : ""}
+      ${tiers}
+    </div></div>
+    <button class="pd-close" aria-label="Lukk">×</button>`;
+  dlg.querySelector(".pd-close").onclick = () => dlg.close();
+  dlg.querySelector("#pdCopy").onclick = async e => {
+    try { await navigator.clipboard.writeText(p.brief); e.target.textContent = "Kopiert"; } catch(_){ e.target.textContent = "Kunne ikke kopiere"; }
+  };
+  dlg.onclick = e => { if (e.target === dlg) dlg.close(); };
+  dlg.showModal();
+}
+
 /* ---------- Faner, nivå, verktøytips ---------- */
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
   document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
-  for (const t of ["steder", "kjennetegn", "fordelinger"]) $("tab-" + t).hidden = t !== tab;
+  for (const t of ["personas", "steder", "kjennetegn", "fordelinger"]) $("tab-" + t).hidden = t !== tab;
   if (tab === "fordelinger") renderDists(filters(), seq);
+  if (tab === "personas") renderPersonas(filters(), seq);
 });
 document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
   level = b.dataset.level;

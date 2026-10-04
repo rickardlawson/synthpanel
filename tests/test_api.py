@@ -43,7 +43,10 @@ def test_frontend_served_and_docs_still_work():
 
 
 def test_dimensions_config_matches_data():
-    secs = client.get("/dimensions").json()["sections"]
+    cfg = client.get("/dimensions").json()
+    assert [t["id"] for t in cfg["tiers"]] == ["hygiene", "motivasjon", "verdi"]
+    assert all(s["tier"] in ("hygiene", "motivasjon", "verdi") for s in cfg["sections"])
+    secs = cfg["sections"]
     keys = [d["key"] for s in secs for d in s["dims"]]
     assert {"kjonn", "fylke", "parti_2025"} <= set(keys)
     fylke = next(d for s in secs for d in s["dims"] if d["key"] == "fylke")
@@ -58,6 +61,27 @@ def test_places_and_profile():
     pr = client.get("/population/profile", params=q).json()
     assert pr["over"] and all(r["lift"] >= 1.2 for r in pr["over"])
     assert not any(r["dim"] in ("kjonn", "aldersband") for r in pr["over"] + pr["under"])
+
+
+def test_personas_cover_segment_and_respect_filters():
+    q = {"kjonn": "kvinne", "aldersband": ["67-79"]}
+    d = client.get("/population/personas", params=q).json()
+    ps = d["personas"]
+    assert 5 <= len(ps) <= 10
+    assert sum(p["andel"] for p in ps) == pytest.approx(1.0)
+    assert [p["andel"] for p in ps] == sorted((p["andel"] for p in ps), reverse=True)
+    assert all(p["kjonn"] == "kvinne" and 67 <= p["alder"] <= 79 for p in ps)
+    assert len({p["navn"] for p in ps}) == len(ps)
+    assert set(ps[0]["profil"]) == {"hygiene", "motivasjon", "verdi"}
+    from synthpanel.api.main import _personas_cached
+    _personas_cached.cache_clear()
+    again = client.get("/population/personas", params=q).json()["personas"]
+    assert [p["id"] for p in again] == [p["id"] for p in ps]  # samme utvalg -> samme personas
+
+
+def test_personas_small_segment_is_refused():
+    d = client.get("/population/personas", params={"fylke": "56", "parti_2025": "MDG", "aldersband": "80+"}).json()
+    assert d["personas"] == [] and d["melding"]
 
 
 def _parallel_over_http(app_obj, n_rounds=10):

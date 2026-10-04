@@ -1,4 +1,4 @@
-.PHONY: install fetch fetch-ess build data test validate serve up down rebuild-data
+.PHONY: install names portraits fetch fetch-ess build data test validate serve up down rebuild-data
 
 install:
 	pip install -e ".[dev]"
@@ -7,6 +7,13 @@ fetch:          ## Hent rådata fra SSB og Valgdirektoratet
 	python -m synthpanel.frame.fetch
 	python -m synthpanel.politics.fetch
 	python -m synthpanel.media.layer
+	python -m synthpanel.personas.names
+
+names:          ## Hent navnestatistikk (SSB) til persona-galleriet
+	python -m synthpanel.personas.names
+
+portraits:      ## Lag manglende AI-portretter (tungt – se scripts/generate_portraits.py)
+	python scripts/generate_portraits.py
 
 build:          ## Bygg syntetisk populasjon fra rådata
 	python -m synthpanel.frame.build

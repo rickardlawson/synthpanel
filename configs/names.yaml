@@ -1,0 +1,52 @@
+# Navn for personas med innvandrerbakgrunn.
+#
+# Norske navn trekkes fra SSB (10467: fornavn etter fødselsår, 12891: etternavn),
+# vektet etter hvor vanlige de er – slik at en kvinne født i 1965 typisk heter
+# Anne, Hilde eller Heidi. SSB publiserer ikke navn etter landbakgrunn, så for
+# personas med innvandrerbakgrunn brukes denne kuraterte listen med vanlige navn
+# fra opphavslandet. Opphavet følger portrettet, slik at navn og ansikt henger sammen.
+#
+# f/m: fornavn for kvinner/menn. etternavn_f/_m: der etternavn er kjønnet (f.eks. polsk).
+
+Polish: {f: [Anna, Katarzyna, Agnieszka, Magdalena, Joanna, Monika], m: [Piotr, Tomasz, Paweł, Krzysztof, Marcin, Michał],
+         etternavn_f: [Nowak, Kowalska, Wiśniewska, Wójcik, Kamińska, Lewandowska], etternavn_m: [Nowak, Kowalski, Wiśniewski, Wójcik, Kamiński, Lewandowski]}
+Lithuanian: {f: [Rasa, Inga, Jurgita, Vilma, Ieva], m: [Tomas, Mindaugas, Darius, Andrius, Marius],
+             etternavn_f: [Kazlauskienė, Petrauskienė, Jankauskaitė, Stankevičienė], etternavn_m: [Kazlauskas, Petrauskas, Jankauskas, Stankevičius]}
+Swedish: {f: [Anna, Eva, Maria, Karin, Sara, Linnea], m: [Erik, Lars, Johan, Anders, Mikael, Oskar],
+          etternavn: [Andersson, Johansson, Karlsson, Nilsson, Eriksson, Larsson]}
+German: {f: [Sabine, Claudia, Julia, Katrin, Anja], m: [Thomas, Michael, Stefan, Andreas, Jan],
+         etternavn: [Müller, Schmidt, Schneider, Fischer, Weber, Becker]}
+Bosnian: {f: [Amra, Selma, Lejla, Emina, Alma], m: [Edin, Amir, Admir, Senad, Haris],
+          etternavn: [Hodžić, Hadžić, Begić, Mehić, Delić, Hasanović]}
+Pakistani: {f: [Ayesha, Sadia, Nadia, Samina, Rabia, Sana], m: [Imran, Kamran, Tariq, Usman, Bilal, Faisal],
+            etternavn: [Khan, Hussain, Ahmed, Butt, Malik, Iqbal]}
+Iraqi: {f: [Zainab, Noor, Hana, Shaima, Rana], m: [Ali, Ahmed, Mustafa, Haider, Karrar],
+        etternavn: [Hassan, Abdullah, Jabbar, Kareem, Saleh]}
+Filipino: {f: [Maria, Rosalie, Jocelyn, Angelica, Marites, Joy], m: [Jose, Mark, Ramon, Jerome, Rodel],
+           etternavn: [Santos, Reyes, Cruz, Bautista, Garcia, Mendoza]}
+Vietnamese: {f: [Lan, Thu, Huong, Mai, Linh], m: [Minh, Tuan, Hung, Duc, Long],
+             etternavn: [Nguyen, Tran, Le, Pham, Hoang, Vu]}
+Afghan: {f: [Fatima, Mariam, Zahra, Parwana, Shabnam], m: [Ahmad, Mohammad, Hamid, Farid, Javid],
+         etternavn: [Ahmadi, Rahimi, Karimi, Hashimi, Sultani]}
+Syrian: {f: [Rasha, Lina, Ghada, Hiba, Rama], m: [Omar, Khaled, Mohammad, Ammar, Fadi],
+         etternavn: [Haddad, Khalil, Saleh, Hamdan, Alhamad]}
+Thai: {f: [Siriporn, Malee, Kanya, Pornthip, Wanida], m: [Somchai, Anan, Niran, Prasert, Chaiwat],
+       etternavn: [Srisuk, Boonmee, Saetang, Chaiyaporn, Wongsa]}
+Indian: {f: [Priya, Anjali, Deepa, Kavitha, Neha], m: [Rahul, Amit, Vikram, Arjun, Suresh],
+         etternavn: [Sharma, Patel, Singh, Kumar, Nair, Reddy]}
+Somali: {f: [Hodan, Faduma, Amina, Sahra, Khadra, Ifrah], m: [Abdirahman, Mohamed, Abdullahi, Ahmed, Abdi, Yusuf],
+         etternavn: [Mohamed, Ali, Hassan, Warsame, Abdi, Osman]}
+Eritrean: {f: [Helen, Selam, Senait, Yordanos, Saba], m: [Yonas, Daniel, Tesfay, Robel, Filmon],
+           etternavn: [Tesfamariam, Ghebremedhin, Haile, Berhe, Tekle]}
+Ethiopian: {f: [Tigist, Meron, Hanna, Bethlehem, Selamawit], m: [Dawit, Abebe, Samuel, Yared, Henok],
+            etternavn: [Tadesse, Bekele, Alemu, Girma, Kebede]}
+Nigerian: {f: [Chioma, Ngozi, Funmilayo, Adaeze, Blessing], m: [Chinedu, Emeka, Tunde, Oluwaseun, Ifeanyi],
+           etternavn: [Okafor, Adeyemi, Okonkwo, Eze, Balogun]}
+Chilean: {f: [Carolina, Daniela, Paula, Francisca, Javiera], m: [Felipe, Cristián, Rodrigo, Sebastián, Matías],
+          etternavn: [González, Muñoz, Rojas, Díaz, Soto]}
+Colombian: {f: [Paola, Natalia, Andrea, Catalina, Diana], m: [Andrés, Juan Carlos, Diego, Camilo, Julián],
+            etternavn: [Rodríguez, Gómez, Martínez, López, Hernández]}
+Brazilian: {f: [Ana Paula, Juliana, Fernanda, Camila, Patrícia], m: [Rafael, Lucas, Thiago, Bruno, Gustavo],
+            etternavn: [Silva, Santos, Oliveira, Souza, Pereira]}
+American: {f: [Jennifer, Sarah, Emily, Jessica, Ashley], m: [Michael, David, Chris, Matthew, Ryan],
+           etternavn: [Smith, Johnson, Miller, Brown, Davis]}

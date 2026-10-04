@@ -13,9 +13,54 @@ verdifulle er ofte **gapet** mellom de to.
 | **L0 Befolkningsramme** | Kjønn, alder, kommune, fylke, sentralitet, utdanning, landbakgrunn, innvandringskategori, hovedstatus (arbeid/studier/pensjon/trygd), husholdningstype, lavinntekt, inntektsdesil. Neste: yrke/næring, bolig | SSB | ✅ v0.2 |
 | **L1 Fasitbibliotek – atferd** | Valgresultater, mediebruk, forbruk, dagligvare, kjente meningsmålinger. Lagres som *fordelinger med metadata* (kilde, år, spørsmål, populasjon, usikkerhet) | SSB, Valgundersøkelsen, Medietilsynet, publiserte målinger | ⏳ |
 | **L2 Verdilag** | Schwartz-verdier (fire hovedretninger), tillit, risikovilje, klimabekymring, religiøsitet, politisk ståsted og interesse. Neste: frivillighet, mediebruk, Medborgerpanelet | ESS runde 9–11 (ev. Norsk Monitor på lisens) | ✅ v0.3 |
-| **L3 Arketyper (8–12)** | Utledes statistisk fra L2 (latent klasseanalyse), navngis etterpå. Koblet til L0 → størrelse, geografi, kjøpekraft | Avledet | ⏳ |
+| **L3 Arketyper / personas** | v0: «Ti på gata» – de største grupperingene i hvilket som helst utvalg, vist som representative personer (se under). Neste: faste arketyper (latent klasseanalyse på L2) | Avledet | 🟡 v0 |
 | **L4 Scenariomotor** | Stimulus inn → reaksjon per segment ut, med usikkerhet, volumvekt og spredning over tid (first movers → etternølere) | LLM + kalibrering | Kontrakt i `POST /estimate` |
 | **L5 Mediekobling** | Fersk kontekst fra Signalist (Brands / People / Debates) | Signalist API | Senere – via avtale |
+
+## Verdihierarkiet
+
+Alle egenskaper er ordnet i tre lag, fra det målbare til det dype. Hierarkiet
+styres fra `configs/dimensions.yaml` (lag → seksjoner → dimensjoner) og brukes
+likt i API (`/dimensions`, `lag` på kjennetegn), grensesnitt og persona-profiler.
+
+| Lag | Spørsmål | Innhold | Presisjon |
+|---|---|---|---|
+| **1 Hygienefaktorer** | Hvem er de, hvordan lever de? | Demografi og bosted · utdanning og arbeid · husholdning, økonomi og bolig | Registerdata (SSB) |
+| **2 Motivasjonsfaktorer** | Hva bruker de tid, oppmerksomhet og stemme på? | Medievaner · forbruk og netthandel · politisk engasjement (parti, interesse) | Estimert fra undersøkelser |
+| **3 Verdifaktorer** | Hva tror de på, hvordan møter de verden? | Grunnverdier (Schwartz) · risikovilje, tillit, klimabekymring, religiøsitet, politisk ståsted | Estimert fra ESS, testet |
+
+## «Ti på gata» – personas (L3 v0)
+
+`GET /population/personas` tar samme filtre som resten av API-et og returnerer de
+(inntil) ti største grupperingene i utvalget.
+
+1. Agentene kodes på tvers av hierarkiet (alder, husholdning, status, utdanning,
+   økonomi, bolig, bosted · parti, medier, netthandel · verdier og holdninger),
+   med vekter per lag (1,0 / 0,7 / 0,8). Egenskaper som er låst av filteret, utelates.
+2. Vektet k-means (k ≤ 10, minst 15 agenter per gruppe) på et utvalg på inntil
+   6 000 agenter. Grupperingene dekker hele utvalget; `andel` summerer til 1.
+3. Hver gruppering vises som den *faktiske* agenten nærmest gruppens midtpunkt –
+   en sammenhengende person, ikke et gjennomsnitt. «Typisk for grupperingen» er
+   egenskaper med andel ≥ 45 % og lift ≥ 1,35 mot resten av utvalget.
+4. **Navn:** norsk bakgrunn – fornavn trukket blant navn gitt til barn født
+   samme år ± 2 (SSB 10467), etternavn blant vanlige etternavn (SSB 12891).
+   Annen bakgrunn – kuratert liste per opphavsland (`configs/names.yaml`), som
+   følger portrettet slik at navn og ansikt henger sammen.
+5. **Portretter:** AI-genererte (Realistic Vision 5.1 + LCM-LoRA, åpne lisenser)
+   per kjønn × 7 aldersgrupper × landbakgrunn, laget én gang med
+   `scripts/generate_portraits.py` og sjekket inn. Merket «AI-generert» i
+   grensesnittet. Mangler et passende bilde, vises initial – aldri et ansikt
+   med feil alder.
+6. **Brief:** hver persona har en tekst (`brief`) som beskriver personen etter
+   hierarkiet – grunnlaget når personaene skal kunne svare på spørsmål og
+   reagere på budskap (L4).
+
+Samme utvalg gir alltid samme personas (frø fra filtrene).
+
+**Svakheter:** k-means på blandede data gir grupper som er gode til å
+oppsummere, men ikke nødvendigvis «naturlige» segmenter; verdiene og medievanene
+er koblet til demografien gjennom statistisk matching, så en enkelt persona kan
+ha kombinasjoner som er mindre typiske enn gruppen den representerer.
 
 ## Prinsipper (lærdom fra Pew 2026 og Hiasynth)
 
@@ -195,9 +240,11 @@ Opoint-data avtales eksplisitt før kobling.
 2. ✅ L0b: innvandringskategori, hovedstatus, husholdning, lavinntekt, inntekt
 3. ✅ L2 verdilag fra ESS + første testsett; bolig
 4. ✅ Politisk lag (valg 2025) og medielag (kjønn × alder)
+4c. ✅ Verdihierarki (hygiene / motivasjon / verdi) og «Ti på gata»-personas med navn og AI-portretter
 4b. ✅ Nytt grensesnitt: målgruppebygger med kategorier (styrt av `configs/dimensions.yaml`), resultatpanel med steder (størst/tettest + lift) og kjennetegn (`/population/places`, `/population/profile`)
 5. Forbruksprofil (SSB forbruksundersøkelse), fritid; Mediebarometer-mikrodata (Sikt)
 6. Utvidet testsett: Norsk medborgerpanel og publiserte målinger
-7. L3 arketyper v0 (latent klasseanalyse på verdilaget)
-8. L4 første scenario ende-til-ende (Tine), målt mot testsettet
-9. L5 kobling til Signalist
+7. L3 faste arketyper (latent klasseanalyse på verdilaget)
+8. L4: still personaene spørsmål og test budskap på tvers av galleriet (språkmodell med briefen som grunnlag)
+9. L4 første scenario ende-til-ende (Tine), målt mot testsettet
+10. L5 kobling til Signalist

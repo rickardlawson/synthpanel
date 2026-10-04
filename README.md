@@ -13,6 +13,9 @@ segmentene er.
 > European Social Survey (testet mot respondenter modellen ikke har sett),
 > partivalg ved stortingsvalget 2025 (kalibrert mot valgresultatet per fylke)
 > og bruk av sosiale medier, strømming og netthandel.
+> Egenskapene er ordnet i et verdihierarki – hygiene-, motivasjons- og
+> verdifaktorer – og fanen «Ti på gata» viser de ti største grupperingene i
+> ethvert utvalg som personer med navn og AI-generert portrett.
 > Scenariomotoren (L4) har definert kontrakt, men er ikke bygget ennå. Se [docs/architecture.md](docs/architecture.md).
 
 ## Kom i gang
@@ -26,10 +29,10 @@ curl localhost:8090/health
 ```
 
 Befolkningsutforsker: `http://localhost:8090/` – bygg en målgruppe til venstre
-(søk, eller kryss av i kategoriene Hvem · Livssituasjon · Verdier · Politikk ·
-Medier) og se til høyre hvor stor den er, hvor den bor (størst og tettest, med
-lift) og hva som kjennetegner den. Kategoriene og etikettene styres fra
-`configs/dimensions.yaml`.
+(søk, eller kryss av i verdihierarkiet: 1 Hygienefaktorer · 2 Motivasjonsfaktorer ·
+3 Verdifaktorer) og se til høyre hvor stor den er, hvem som er «ti på gata» i
+gruppen, hvor den bor (størst og tettest, med lift) og hva som kjennetegner den.
+Hierarkiet, kategoriene og etikettene styres fra `configs/dimensions.yaml`.
 
 API-dokumentasjon med «Try it out»: `http://localhost:8090/docs`
 (tjenesten lytter kun på localhost som standard – se `docker-compose.yml`).
@@ -80,7 +83,8 @@ som sikrere enn de er.
 
 ```
 configs/frame.yaml          kilder, aldersbånd, kodelister
-configs/dimensions.yaml     kategorier, etiketter og formuleringer for API og grensesnitt
+configs/dimensions.yaml     verdihierarkiet: lag, kategorier, etiketter og formuleringer
+configs/names.yaml          navn for personas med innvandrerbakgrunn (norske navn: SSB)
 src/synthpanel/
   ssb.py                    klient for SSB PxWebApi v2 og Klass
   frame/fetch.py            henter rådata  -> data/raw/*.parquet
@@ -91,8 +95,10 @@ src/synthpanel/
   values/validate.py        testsett mot holdte ESS-respondenter
   politics/                 valgresultat 2025, velgerstrømmer, deltakelse -> parti per agent
   media/layer.py            sosiale medier, strømming, netthandel
+  personas/                 «Ti på gata»: grupperinger, navn (SSB), portrettvalg
   api/main.py               FastAPI
   web/index.html            befolkningsutforskeren (ren HTML/JS, ingen byggesteg)
+  web/portraits/            AI-genererte portretter (lages av scripts/generate_portraits.py)
 tests/                      kalibrering, SSB-avstemming, API
 docs/architecture.md        modellen L0–L5, prinsipper og veikart
 ```
@@ -106,9 +112,13 @@ noe må skrives om. Port 8090 for å ikke kollidere med Signalist på 8080.
 
 ## Datakilder
 
-Åpne data: 28 SSB-tabeller pluss Klass 128 (sentralitet), Valgdirektoratets
+Åpne data: 30 SSB-tabeller (inkl. navnestatistikk) pluss Klass 128 (sentralitet), Valgdirektoratets
 resultater for stortingsvalget 2025 (alle kommuner), og European Social
 Survey runde 9–11 (4 154 norske respondenter, 2018–2024). ESS-vilkårene skiller
 mellom forsknings- og kommersiell bruk – avklar før panelet selges. Oversikt over
 hvilken tabell som brukes til hva står i [docs/architecture.md](docs/architecture.md). Se `GET /meta` for nøyaktige perioder og
 hentetidspunkt.
+
+Portrettene i persona-galleriet er AI-genererte med Realistic Vision 5.1
+(CreativeML OpenRAIL-M), LCM-LoRA (OpenRAIL++) og sd-vae-ft-mse (MIT). De
+forestiller ingen virkelige personer og er merket som AI-genererte.
