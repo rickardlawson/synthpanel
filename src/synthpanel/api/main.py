@@ -95,14 +95,127 @@ def _con() -> duckdb.DuckDBPyConnection:
     return _db().cursor()
 
 
-def _where(f: Filters) -> tuple[str, list]:
-    clauses, params = [], []
+def _cond(f: Filters) -> tuple[str, list, list[str]]:
+    """SQL-betingelse for filtrene (uten WHERE), parametere og hvilke kolonner som er filtrert."""
+    clauses, params, cols = [], [], []
     for col, values in f.model_dump(include=set(Filters.model_fields)).items():
         if values:
             assert col in DIMENSIONS  # kolonnenavn kommer fra modellen, aldri fra bruker
             clauses.append(f"CAST({col} AS VARCHAR) IN ({', '.join('?' for _ in values)})")
             params.extend(values)
-    return ("WHERE " + " AND ".join(clauses)) if clauses else "", params
+            cols.append(col)
+    return (" AND ".join(clauses) if clauses else "TRUE"), params, cols
+
+
+def _where(f: Filters) -> tuple[str, list]:
+    cond, params, cols = _cond(f)
+    return ("WHERE " + cond) if cols else "", params
+
+
+class PlacesParams(Filters):
+    level: str = Field("kommune", pattern="^(kommune|fylke)$", description="kommune eller fylke")
+    limit: int = 8
+    min_agenter: int = Field(25, description="Minste antall agenter i segmentet for å regnes med i «tettest»")
+
+
+class ProfileParams(Filters):
+    limit: int = 8
+    min_andel: float = Field(0.08, description="Minste andel (av segmentet eller befolkningen) for å vises")
+
+
+@lru_cache
+def dimension_config() -> dict:
+    return config.load("dimensions")
+
+
+@app.get("/dimensions")
+def dimensions():
+    """Seksjoner, dimensjoner og etiketter som grensesnittet bygges fra."""
+    cfg = dimension_config()
+    out = {"sections": [], "binary_groups": cfg.get("binary_groups", {})}
+    cols = set(_con().execute("SELECT * FROM agents LIMIT 0").df().columns)
+    for sec in cfg["sections"]:
+        dims = []
+        for d in sec["dims"]:
+            if d["key"] not in cols:
+                continue  # laget er ikke bygget (f.eks. uten ESS-data)
+            d = dict(d)
+            if d.get("values") == "from_data":
+                rows = _con().execute(
+                    f"SELECT DISTINCT {d['key']}, {d['label_column']} FROM agents ORDER BY 2").fetchall()
+                d["values"] = {k: v.split(" - ")[0] for k, v in rows}
+            dims.append(d)
+        if dims:
+            out["sections"].append({**{k: v for k, v in sec.items() if k != "dims"}, "dims": dims})
+    return out
+
+
+@app.get("/population/places")
+def places(f: Annotated[PlacesParams, Query()]):
+    """Hvor bor segmentet? «Størst» = flest personer; «tettest» = høyest lift
+    (andel av stedets voksne delt på andelen i hele landet)."""
+    cond, params, _ = _cond(f)
+    geo, name = ("kommune", "kommune_navn") if f.level == "kommune" else ("fylke", "fylke_navn")
+    con = _con()
+    total, seg_total = con.execute(f"SELECT SUM(vekt), SUM(vekt) FILTER (WHERE {cond}) FROM agents", params).fetchone()
+    seg_total = seg_total or 0.0
+    base = seg_total / total if total else 0.0
+    rows = con.execute(
+        f"""
+        SELECT {geo}, ANY_VALUE({name}),
+               COALESCE(SUM(vekt) FILTER (WHERE {cond}), 0) AS personer,
+               COUNT(*) FILTER (WHERE {cond}) AS agenter,
+               SUM(vekt) AS voksne
+        FROM agents GROUP BY 1
+        """, params + params).fetchall()
+    items = []
+    for kode, navn, pers, n, voksne in rows:
+        andel = pers / voksne if voksne else 0.0
+        items.append({"kode": kode, "navn": navn.split(" - ")[0], "personer": round(pers), "agenter": n,
+                      "andel_av_stedet": andel, "lift": (andel / base) if base else None})
+    storst = sorted(items, key=lambda r: -r["personer"])[: f.limit]
+    tettest = sorted([r for r in items if r["agenter"] >= f.min_agenter], key=lambda r: -(r["lift"] or 0))[: f.limit]
+    return {"segment_personer": round(seg_total), "andel_av_voksne": base, "storst": storst, "tettest": tettest,
+            "steder_med_nok_data": sum(1 for r in items if r["agenter"] >= f.min_agenter)}
+
+
+@app.get("/population/profile")
+def profile(f: Annotated[ProfileParams, Query()]):
+    """Hva kjennetegner segmentet? Kategorier som er klart over- eller underrepresentert
+    sammenlignet med hele befolkningen (lift = andel i segmentet / andel i befolkningen)."""
+    cond, params, filtered = _cond(f)
+    con = _con()
+    cols = set(con.execute("SELECT * FROM agents LIMIT 0").df().columns)
+    seg_total, total, n = con.execute(
+        f"SELECT SUM(vekt) FILTER (WHERE {cond}), SUM(vekt), COUNT(*) FILTER (WHERE {cond}) FROM agents",
+        params + params).fetchone()
+    if not seg_total:
+        return {"over": [], "under": [], "agenter": 0}
+    over, under = [], []
+    for sec in dimension_config()["sections"]:
+        for d in sec["dims"]:
+            key = d["key"]
+            geo_filtered = bool({"fylke", "kommune", "sentralitet"} & set(filtered))
+            if key in filtered or key not in cols or (geo_filtered and key in ("fylke", "sentralitet")):
+                continue
+            rows = con.execute(
+                f"""SELECT CAST({key} AS VARCHAR), COALESCE(SUM(vekt) FILTER (WHERE {cond}), 0), SUM(vekt)
+                    FROM agents GROUP BY 1""", params).fetchall()
+            for val, s, p in rows:
+                if val in ("ukjent", None) or (d.get("binary") and val != "ja"):
+                    continue
+                a_seg, a_pop = s / seg_total, p / total
+                lift = a_seg / a_pop if a_pop else 0
+                item = {"dim": key, "seksjon": sec["id"], "verdi": val, "andel_segment": a_seg,
+                        "andel_befolkning": a_pop, "lift": lift, "personer": round(s)}
+                if a_seg >= f.min_andel and lift >= 1.2:
+                    over.append(item)
+                elif a_pop >= f.min_andel and lift <= 0.8:
+                    under.append(item)
+    over.sort(key=lambda r: -r["lift"])
+    under.sort(key=lambda r: r["lift"])
+    return {"over": over[: f.limit], "under": under[: f.limit], "agenter": n,
+            "presisjon": _precision_note(n)}
 
 
 @app.get("/health")

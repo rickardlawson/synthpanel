@@ -25,9 +25,11 @@ docker compose up -d --build      # første oppstart henter SSB-data og bygger (
 curl localhost:8090/health
 ```
 
-Befolkningsutforsker: `http://localhost:8090/` – velg blant elleve dimensjoner
-(kjønn, alder, fylke, sentralitet, utdanning, bakgrunn, status, husholdning, inntekt …) og se hvor stort segmentet er og hvordan
-det skiller seg fra resten av befolkningen.
+Befolkningsutforsker: `http://localhost:8090/` – bygg en målgruppe til venstre
+(søk, eller kryss av i kategoriene Hvem · Livssituasjon · Verdier · Politikk ·
+Medier) og se til høyre hvor stor den er, hvor den bor (størst og tettest, med
+lift) og hva som kjennetegner den. Kategoriene og etikettene styres fra
+`configs/dimensions.yaml`.
 
 API-dokumentasjon med «Try it out»: `http://localhost:8090/docs`
 (tjenesten lytter kun på localhost som standard – se `docker-compose.yml`).
@@ -78,6 +80,7 @@ som sikrere enn de er.
 
 ```
 configs/frame.yaml          kilder, aldersbånd, kodelister
+configs/dimensions.yaml     kategorier, etiketter og formuleringer for API og grensesnitt
 src/synthpanel/
   ssb.py                    klient for SSB PxWebApi v2 og Klass
   frame/fetch.py            henter rådata  -> data/raw/*.parquet

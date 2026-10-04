@@ -42,6 +42,24 @@ def test_frontend_served_and_docs_still_work():
     assert client.get("/docs").status_code == 200
 
 
+def test_dimensions_config_matches_data():
+    secs = client.get("/dimensions").json()["sections"]
+    keys = [d["key"] for s in secs for d in s["dims"]]
+    assert {"kjonn", "fylke", "parti_2025"} <= set(keys)
+    fylke = next(d for s in secs for d in s["dims"] if d["key"] == "fylke")
+    assert len(fylke["values"]) >= 15  # hentet fra data med navn
+
+
+def test_places_and_profile():
+    q = {"kjonn": "mann", "aldersband": ["18-19", "20-24", "25-29"]}
+    pl = client.get("/population/places", params=q).json()
+    assert pl["storst"][0]["navn"] == "Oslo"
+    assert all(r["agenter"] >= 25 for r in pl["tettest"])
+    pr = client.get("/population/profile", params=q).json()
+    assert pr["over"] and all(r["lift"] >= 1.2 for r in pr["over"])
+    assert not any(r["dim"] in ("kjonn", "aldersband") for r in pr["over"] + pr["under"])
+
+
 def _parallel_over_http(app_obj, n_rounds=10):
     """Start en ekte uvicorn-server og send mange samtidige kall, slik nettsiden gjør."""
     import socket

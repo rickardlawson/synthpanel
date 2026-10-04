@@ -1,0 +1,121 @@
+# Alle dimensjoner som kan filtreres og vises – én kilde for API og grensesnitt.
+#
+# key:        kolonnenavn i agenttabellen
+# title:      visningsnavn
+# values:     rekkefølge og etiketter. «from_data» = hentes fra populasjonen.
+# phrase:     hvordan valget beskrives i setningen om målgruppen ({} = valgte etiketter)
+# binary:     ja/nei-egenskap som vises som én avkrysning (medier m.m.)
+# estimate:   true = estimert fra spørreundersøkelse, ikke registerdata
+
+sections:
+  - id: hvem
+    title: Hvem
+    dims:
+      - key: kjonn
+        title: Kjønn
+        values: {kvinne: Kvinner, mann: Menn}
+      - key: aldersband
+        title: Alder
+        values: {"18-19": "18–19 år", "20-24": "20–24 år", "25-29": "25–29 år", "30-39": "30–39 år",
+                 "40-49": "40–49 år", "50-59": "50–59 år", "60-66": "60–66 år", "67-79": "67–79 år", "80+": "80 år+"}
+      - key: fylke
+        title: Fylke
+        values: from_data
+        label_column: fylke_navn
+      - key: sentralitet
+        title: Sentralitet
+        values: {"01": "1 – mest sentral", "02": "2", "03": "3", "04": "4", "05": "5", "06": "6 – minst sentral"}
+        phrase: "i kommuner med sentralitet {}"
+      - key: utdanning
+        title: Utdanning
+        values: {grunnskole: Grunnskole, videregaende: Videregående, fagskole: Fagskole,
+                 uh_kort: Kort høyere, uh_lang: Lang høyere, uoppgitt: Uoppgitt}
+        phrase: "med {}"
+      - key: bakgrunn
+        title: Landbakgrunn
+        values: {norsk: Norsk, europa: Europa, asia: Asia, afrika: Afrika, annet: Annen verdensdel}
+        phrase: "med bakgrunn: {}"
+      - key: innvkat
+        title: Innvandringskategori
+        values: {ovrige: Uten innvandrerbakgrunn, innvandrer: Innvandrer, norskfodt_innv_foreldre: "Norskfødt m. innv.foreldre"}
+
+  - id: livssituasjon
+    title: Livssituasjon, økonomi og bolig
+    dims:
+      - key: arbeidsstatus
+        title: Hovedstatus
+        values: {sysselsatt: I arbeid, student: Under utdanning, pensjonist: Pensjonist, aap_ufor: AAP eller uføretrygd,
+                 arbeidsledig: Arbeidsledig, tiltak: Tiltak, annet: Annet}
+      - key: husholdning
+        title: Husholdning
+        values: {aleneboende: Bor alene, par_uten_barn: Par uten barn, par_smaa_barn: "Par, yngste barn 0–5",
+                 par_store_barn: "Par, yngste barn 6–17", enslig_smaa_barn: "Alene med barn 0–5",
+                 enslig_store_barn: "Alene med barn 6–17", voksne_barn: Med voksne barn, flerfamilie: Flerfamilie, annet: Annet}
+      - key: inntektsdesil
+        title: Husholdningsinntekt (desil)
+        values: {"1": "1 – lavest", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "10": "10 – høyest"}
+        phrase: "med husholdningsinntekt i desil {}"
+      - key: lavinntekt
+        title: Lavinntekt (EU-60)
+        values: {ja: Lavinntekt, nei: Ikke lavinntekt}
+      - key: eierstatus
+        title: Eierstatus
+        values: {selveier: Selveier, andelseier: Andels-/aksjeeier, leier: Leier}
+      - key: boligtype
+        title: Boligtype
+        values: {enebolig: Enebolig, tomannsbolig: Tomannsbolig, rekkehus_smahus: Rekkehus/småhus, blokk: Blokk, annen: Annen}
+        phrase: "som bor i {}"
+
+  - id: verdier
+    title: Verdier og holdninger
+    estimate: true
+    dims:
+      - {key: verdi_apenhet, title: Åpenhet for endring, values: {lav: Lav, middels: Middels, høy: Høy}, phrase: "med {} åpenhet for endring"}
+      - {key: verdi_trygghet, title: Trygghet og tradisjon, values: {lav: Lav, middels: Middels, høy: Høy}, phrase: "med {} vekt på trygghet og tradisjon"}
+      - {key: verdi_selvhevdelse, title: Suksess og status, values: {lav: Lav, middels: Middels, høy: Høy}, phrase: "med {} vekt på suksess og status"}
+      - {key: verdi_fellesskap, title: Omsorg og fellesskap, values: {lav: Lav, middels: Middels, høy: Høy}, phrase: "med {} vekt på omsorg og fellesskap"}
+      - {key: tillit, title: Tillit til institusjoner, values: {lav: Lav, middels: Middels, høy: Høy}, phrase: "med {} tillit til institusjoner"}
+      - {key: risikovilje, title: Risikovilje, values: {lav: Lav, middels: Middels, høy: Høy}, phrase: "med {} risikovilje"}
+      - {key: klimabekymring, title: Klimabekymring, values: {lav: Lav, middels: Middels, høy: Høy}, phrase: "med {} klimabekymring"}
+      - {key: religiositet, title: Religiøsitet, values: {lav: Lav, middels: Middels, høy: Høy}, phrase: "med {} religiøsitet"}
+      - {key: politisk_sted, title: Politisk ståsted, values: {venstre: Venstre, sentrum: Sentrum, høyre: Høyre}, phrase: "som plasserer seg {} politisk"}
+      - {key: politisk_interesse, title: Interesse for politikk, values: {lav: Lav, høy: Høy}, phrase: "med {} politisk interesse"}
+
+  - id: politikk
+    title: Politikk
+    estimate: true
+    dims:
+      - key: parti_2025
+        title: Stemte i 2025
+        values: {A: Ap, FRP: FrP, H: Høyre, SP: Sp, SV: SV, RØDT: Rødt, MDG: MDG, KRF: KrF, V: Venstre, ANDRE: Andre,
+                 stemte_ikke: Stemte ikke, ikke_stemmerett: Ikke stemmerett}
+        phrase: "som stemte {} i 2025"
+      - key: partisympati
+        title: Nærmeste parti
+        values: {A: Ap, FRP: FrP, H: Høyre, SP: Sp, SV: SV, RØDT: Rødt, MDG: MDG, KRF: KrF, V: Venstre, ANDRE: Andre}
+        phrase: "som står nærmest {}"
+
+  - id: medier
+    title: Medier og netthandel
+    estimate: true
+    dims:
+      - {key: daglig_facebook, title: Facebook, binary: daglig}
+      - {key: daglig_instagram, title: Instagram, binary: daglig}
+      - {key: daglig_snapchat, title: Snapchat, binary: daglig}
+      - {key: daglig_tiktok, title: TikTok, binary: daglig}
+      - {key: daglig_youtube, title: YouTube, binary: daglig}
+      - {key: daglig_linkedin, title: LinkedIn, binary: daglig}
+      - {key: daglig_nrktv, title: NRK TV, binary: daglig}
+      - {key: daglig_netflix, title: Netflix, binary: daglig}
+      - {key: daglig_tv2play, title: TV 2 Play, binary: daglig}
+      - {key: daglig_viaplay, title: Viaplay, binary: daglig}
+      - {key: daglig_disney, title: Disney+, binary: daglig}
+      - {key: netthandel_dagligvarer, title: Dagligvarer, binary: netthandel}
+      - {key: netthandel_klaer, title: Klær og sport, binary: netthandel}
+      - {key: netthandel_reiser, title: Reiser og overnatting, binary: netthandel}
+      - {key: netthandel_takeaway, title: Take-away, binary: netthandel}
+      - {key: netthandel_kosmetikk, title: Kosmetikk og velvære, binary: netthandel}
+
+binary_groups:
+  daglig: {title: Bruker daglig, phrase: "som bruker {} daglig"}
+  netthandel: {title: Har handlet på nett siste år, phrase: "som har kjøpt {} på nett"}

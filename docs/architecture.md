@@ -195,6 +195,7 @@ Opoint-data avtales eksplisitt før kobling.
 2. ✅ L0b: innvandringskategori, hovedstatus, husholdning, lavinntekt, inntekt
 3. ✅ L2 verdilag fra ESS + første testsett; bolig
 4. ✅ Politisk lag (valg 2025) og medielag (kjønn × alder)
+4b. ✅ Nytt grensesnitt: målgruppebygger med kategorier (styrt av `configs/dimensions.yaml`), resultatpanel med steder (størst/tettest + lift) og kjennetegn (`/population/places`, `/population/profile`)
 5. Forbruksprofil (SSB forbruksundersøkelse), fritid; Mediebarometer-mikrodata (Sikt)
 6. Utvidet testsett: Norsk medborgerpanel og publiserte målinger
 7. L3 arketyper v0 (latent klasseanalyse på verdilaget)
