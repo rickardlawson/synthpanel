@@ -242,7 +242,7 @@ def _labels() -> dict:
 
 
 @lru_cache(maxsize=256)
-def _personas_cached(key: str, n: int, cond: str, params: tuple, filtered: tuple) -> dict:
+def _personas_cached(key: str, n: int, cond: str, params: tuple, filtered: tuple, portraits_stamp: float) -> dict:
     from synthpanel.personas import engine
     seg = _con().execute(f"SELECT * FROM agents WHERE {cond}", list(params)).df()
     tiers = {d["key"]: s["tier"] for s in config_sections() for d in s["dims"]}
@@ -256,7 +256,9 @@ def personas(f: Annotated[PersonaParams, Query()]):
     Grupperingene dekker til sammen hele utvalget (`andel` summerer til 1)."""
     cond, params, filtered = _cond(f)
     key = json.dumps(sorted((c, sorted(map(str, getattr(f, c)))) for c in filtered), ensure_ascii=False)
-    return _personas_cached(key, f.n, cond, tuple(params), tuple(sorted(filtered)))
+    from synthpanel.personas import portraits
+    stamp = portraits.DIR.stat().st_mtime if portraits.DIR.exists() else 0.0  # nye portretter -> nytt valg
+    return _personas_cached(key, f.n, cond, tuple(params), tuple(sorted(filtered)), stamp)
 
 
 @app.get("/health")

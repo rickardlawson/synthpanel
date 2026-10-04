@@ -40,7 +40,8 @@ likt i API (`/dimensions`, `lag` på kjennetegn), grensesnitt og persona-profile
 2. Vektet k-means (k ≤ 10, minst 15 agenter per gruppe) på et utvalg på inntil
    6 000 agenter. Grupperingene dekker hele utvalget; `andel` summerer til 1.
 3. Hver gruppering vises som den *faktiske* agenten nærmest gruppens midtpunkt –
-   en sammenhengende person, ikke et gjennomsnitt. «Typisk for grupperingen» er
+   en sammenhengende person, ikke et gjennomsnitt – blant dem som har gruppens
+   vanligste kjønn, hovedstatus og husholdning. «Typisk for grupperingen» er
    egenskaper med andel ≥ 45 % og lift ≥ 1,35 mot resten av utvalget.
 4. **Navn:** norsk bakgrunn – fornavn trukket blant navn gitt til barn født
    samme år ± 2 (SSB 10467), etternavn blant vanlige etternavn (SSB 12891).

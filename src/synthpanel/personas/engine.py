@@ -196,7 +196,7 @@ def profile(a: pd.Series, labels: dict) -> dict:
         ],
         "motivasjon": [
             ["Daglige medier", joinog(media) if media else "Ingen av de store tjenestene daglig"],
-            ["Handler på nett", joinog(shop) if shop else "Lite netthandel"],
+            ["Handler på nett", joinog(shop).capitalize() if shop else "Lite netthandel"],
             ["Politikk", vote_t + (f" · står nærmest {PARTY.get(a['partisympati'], a['partisympati'])}"
                                    if a.get("partisympati") and a.get("partisympati") != vote else "")],
             ["Politisk interesse", "Høy" if a.get("politisk_interesse") == "høy" else "Lav"],
@@ -303,7 +303,17 @@ def build(seg: pd.DataFrame, filtered: set[str], labels: dict, tier_of: dict, ke
         if not m.any():
             continue
         idx = np.where(m)[0]
-        rep = sample.iloc[idx[((X[idx] - C[j]) ** 2).sum(1).argmin()]]
+        # Representanten skal ha gruppens vanligste kjønn, hovedstatus og husholdning –
+        # ellers kan nærmeste-midtpunkt-regelen gi skjev kjønnsbalanse i galleriet.
+        cl_ = sample.iloc[idx]
+        cand = np.ones(len(idx), bool)
+        for col in ("kjonn", "arbeidsstatus", "husholdning"):
+            mode = cl_.groupby(col)["vekt"].sum().idxmax()
+            nxt = cand & (cl_[col] == mode).to_numpy()
+            if nxt.any():
+                cand = nxt
+        ci = idx[cand]
+        rep = sample.iloc[ci[((X[ci] - C[j]) ** 2).sum(1).argmin()]]
         share = float(w[m].sum() / total)
         out.append((share, j, rep, sample[m]))
     out.sort(key=lambda t: -t[0])
