@@ -188,6 +188,26 @@ def values_text(a: pd.Series) -> list[str]:
     return hi[:3] + lo[:2]
 
 
+def archetype_rows(a: pd.Series) -> list[list[str]]:
+    """Arketypelaget (tolkning) – navn og kort forklaring fra configs/archetypes.yaml."""
+    if a.get("arketype") in (None, "ukjent"):
+        return []
+    from synthpanel import config
+    c = config.load("archetypes")
+    ar, ar2 = c["arketyper"].get(a["arketype"], {}), c["arketyper"].get(a.get("arketype_2"), {})
+    low = lambda t: (t[:1].lower() + t[1:]).rstrip(".")  # noqa: E731
+    rows = [["Arketype", f"{ar.get('navn')} – {low(ar.get('kort', ''))}" + (f" (med trekk av {ar2['navn'].lower()})" if ar2 else "")]]
+    for col, key, label in (("verdikart", ("verdikart", "felt"), "Verdikart"), ("samfunnsrolle", ("samfunnsroller",), "Samfunnsrolle"),
+                            ("resiliens", ("resiliens",), "Kriseresiliens")):
+        node = c
+        for k in key:
+            node = node[k]
+        m = node.get(a.get(col), {})
+        if m:
+            rows.append([label, f"{m['navn']} – {low(m['kort'])}"])
+    return rows
+
+
 def profile(a: pd.Series, labels: dict) -> dict:
     """Personens egenskaper gruppert etter verdihierarkiet."""
     lab = lambda col: labels.get(col, {}).get(str(a[col]), str(a[col]))  # noqa: E731
@@ -224,6 +244,7 @@ def profile(a: pd.Series, labels: dict) -> dict:
             ("verdi_apenhet", "verdi_trygghet", "verdi_selvhevdelse", "verdi_fellesskap", "risikovilje", "tillit",
              "klimabekymring", "religiositet", "politisk_sted") if c in a
         ],
+        "arketype": archetype_rows(a),
     }
 
 
@@ -262,8 +283,10 @@ def brief(name: str, a: pd.Series, prof: dict, share: float, persons: int) -> st
     """Kort persona-beskrivelse til bruk som grunnlag når personaen skal svare på spørsmål (L4)."""
     lines = [f"Du er {name}, {a['alder']} år ({'kvinne' if a['kjonn'] == 'kvinne' else 'mann'}).",
              f"Du representerer en gruppe på om lag {persons:,} voksne i Norge ({share:.0%} av utvalget).".replace(",", " ")]
-    for tier, title_ in (("hygiene", "Livssituasjon"), ("motivasjon", "Interesser og vaner"), ("verdi", "Verdier")):
-        lines.append(f"{title_}: " + "; ".join(f"{k.lower()}: {v}" for k, v in prof[tier]) + ".")
+    for tier, title_ in (("hygiene", "Livssituasjon"), ("motivasjon", "Interesser og vaner"), ("verdi", "Verdier"),
+                         ("arketype", "Personlighet og samfunnsrolle (tolkning)")):
+        if prof.get(tier):
+            lines.append(f"{title_}: " + "; ".join(f"{k.lower()}: {v}" for k, v in prof[tier]) + ".")
     return "\n".join(lines)
 
 
@@ -272,7 +295,7 @@ def distinctive(cl: pd.DataFrame, seg: pd.DataFrame, skip: set[str], labels: dic
     """Det som skiller grupperingen fra resten av utvalget (lift mot utvalget)."""
     out = []
     wc, ws = cl["vekt"], seg["vekt"]
-    for col, *_ in FEATURES:
+    for col in [f[0] for f in FEATURES] + ["arketype", "verdikart", "samfunnsrolle", "resiliens"]:
         if col in skip or col == "alder" or col not in cl.columns:
             continue
         a = cl.groupby(col)["vekt"].sum() / wc.sum()
@@ -296,6 +319,10 @@ def distinctive(cl: pd.DataFrame, seg: pd.DataFrame, skip: set[str], labels: dic
                     lab = {"grunnskole": "Grunnskole som høyeste utdanning", "videregaende": "Videregående som høyeste utdanning",
                            "fagskole": "Fagskoleutdannet", "uh_kort": "Kort høyere utdanning",
                            "uh_lang": "Lang høyere utdanning"}.get(str(val), str(val))
+                elif col in ("arketype", "verdikart", "samfunnsrolle", "resiliens"):
+                    if val == "ukjent":
+                        continue
+                    lab = labels.get(col, {}).get(str(val), str(val))
                 elif col == "kjonn":
                     lab = "Kvinne" if val == "kvinne" else "Mann"
                 else:
@@ -368,6 +395,7 @@ def build(seg: pd.DataFrame, filtered: set[str], labels: dict, tier_of: dict, ke
             "tittel": title(a), "sted": a["kommune_navn"], "portrett": img["fil"] if img else None,
             "andel": share, "personer": persons, "agenter_i_gruppen": len(cl),
             "historie": story(name, a), "profil": prof,
+            "arketype": a.get("arketype") if a.get("arketype") != "ukjent" else None,
             "kjennetegn": distinctive(cl, sample, skip, labels, tier_of),
             "brief": brief(name, a, prof, share, persons),
         })

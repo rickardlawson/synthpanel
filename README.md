@@ -98,6 +98,7 @@ som sikrere enn de er.
 ```
 configs/frame.yaml          kilder, aldersbånd, kodelister
 configs/dimensions.yaml     verdihierarkiet: lag, kategorier, etiketter og formuleringer
+configs/archetypes.yaml     definisjonene bak arketypelaget
 configs/names.yaml          navn for personas med innvandrerbakgrunn (norske navn: SSB)
 src/synthpanel/
   ssb.py                    klient for SSB PxWebApi v2 og Klass
@@ -111,6 +112,7 @@ src/synthpanel/
   media/layer.py            sosiale medier, strømming, netthandel
   leisure/layer.py          trening og friluftsliv (SSB idrett og friluftsliv 2024)
   fasit/                    validering mot kjente utfall (BI Norsk kundebarometer)
+  archetypes/lens.py        arketypelaget: verdikart, arketypehjul, samfunnsroller, kriseresiliens
   personas/                 «Ti på gata»: grupperinger, navn (SSB), portrettvalg
   api/main.py               FastAPI
   web/index.html            befolkningsutforskeren (ren HTML/JS, ingen byggesteg)

@@ -1,0 +1,46 @@
+# Arketypelaget – tolkninger regnet ut fra panelets data (ikke egne trekninger).
+#
+# Grunnlaget er Schwartz' ti grunnverdier fra ESS (de 21 verdispørsmålene, sentrert
+# per person) for agentens ESS-donor, pluss agentens egne registerdata.
+# Forkortelser: SD selvstendighet, ST stimulans, HE nytelse, AC prestasjon, PO makt,
+# SE trygghet, CO konformitet, TR tradisjon, BE velvilje, UN universalisme,
+# TILLIT tillit til institusjoner, LYKKE hvor lykkelig man er.
+
+verdikart:
+  # To akser fra Schwartz' sirkel. Positiv x = moderne (åpenhet for endring),
+  # positiv y = idealistisk (selvoverskridelse). Felt deles ved befolkningens median.
+  felt:
+    tradisjonell_materialist: {navn: Den tradisjonelle materialisten, kort: "Trygghet, orden, økonomisk stabilitet og etablerte normer."}
+    moderne_materialist: {navn: Den moderne materialisten, kort: "Karriere, individuell suksess, teknologi, status og forbruk."}
+    tradisjonell_idealist: {navn: Den tradisjonelle idealisten, kort: "Fellesskap, tradisjonell moral, nøysomhet og vern om natur og kultur."}
+    moderne_idealist: {navn: Den moderne idealisten, kort: "Klima, rettferdighet, likestilling, mangfold og selvutvikling."}
+
+# Jungs tolv arketyper (Mark & Pearson) i hjulets rekkefølge. Profil = hvilke
+# grunnverdier som trekker opp (+) eller ned (−). Personen får arketypen profilen
+# ligner mest på (cosinus mot standardiserte verdier).
+arketyper:
+  uskyldige: {navn: Den uskyldige, motiv: Uavhengighet, kort: "Søker trygghet, optimisme og det enkle.", profil: {SE: 1, TR: 0.5, BE: 0.5, ST: -1, PO: -0.5, LYKKE: 0.7}}
+  vise: {navn: Den vise, motiv: Uavhengighet, kort: "Søker sannhet, kunnskap og forståelse.", profil: {UN: 1, SD: 0.6, HE: -0.5, PO: -0.5, CO: -0.3}}
+  utforskeren: {navn: Utforskeren, motiv: Uavhengighet, kort: "Søker frihet, nye opplevelser og selvstendighet.", profil: {SD: 1, ST: 1, CO: -1, SE: -0.5, TR: -0.5}}
+  rebellen: {navn: Rebellen, motiv: Mestring, kort: "Vil bryte regler og utfordre det etablerte.", profil: {ST: 0.8, HE: 0.5, CO: -1, TR: -1, SE: -0.5, TILLIT: -0.8}}
+  magikeren: {navn: Magikeren, motiv: Mestring, kort: "Vil forstå hvordan ting henger sammen og skape endring.", profil: {SD: 0.7, AC: 0.7, PO: 0.3, TR: -0.7, CO: -0.3}}
+  helten: {navn: Helten, motiv: Mestring, kort: "Vil vise mot og mestring gjennom handling.", profil: {AC: 1, ST: 0.6, PO: 0.4, HE: -0.5, TR: -0.4}}
+  elskeren: {navn: Elskeren, motiv: Tilhørighet, kort: "Søker nærhet, relasjoner og skjønnhet.", profil: {HE: 1, BE: 0.6, ST: 0.3, AC: -0.3, TR: -0.3}}
+  narren: {navn: Narren, motiv: Tilhørighet, kort: "Lever i nuet, sprer glede og bruker humor.", profil: {HE: 1, ST: 0.5, CO: -0.5, AC: -0.5, SE: -0.3, LYKKE: 0.4}}
+  vanlige: {navn: Den vanlige, motiv: Tilhørighet, kort: "Søker tilhørighet, liker det jordnære og vil passe inn.", profil: {CO: 1, BE: 1, PO: -1, AC: -0.5, ST: -0.5}}
+  omsorgspersonen: {navn: Omsorgspersonen, motiv: Stabilitet, kort: "Drevet av å beskytte og hjelpe andre.", profil: {BE: 1, UN: 0.5, SE: 0.5, PO: -1, ST: -0.5}}
+  herskeren: {navn: Herskeren, motiv: Stabilitet, kort: "Søker kontroll, orden og innflytelse.", profil: {PO: 1, SE: 0.4, CO: 0.3, UN: -0.6, BE: -0.3}}
+  skaperen: {navn: Skaperen, motiv: Stabilitet, kort: "Drevet av fantasi og ønsket om å skape noe varig.", profil: {SD: 1, UN: 0.6, CO: -0.4, AC: -0.3, SE: -0.3}}
+
+samfunnsroller:
+  teknokraten: {navn: Teknokraten, kort: "Høy inntekt og utdanning, eier bolig og har tillit til systemet. Styrer etter tall og systemer."}
+  kulturelle_eliten: {navn: Den kulturelle eliten, kort: "Høy utdanning og moderne-idealistiske verdier i sentrale strøk. Setter dagsorden for smak og moral."}
+  systemskeptikeren: {navn: Systemskeptikeren, kort: "Lav tillit til institusjoner og demokratiet. Føler seg oversett av de styrende."}
+  utrygge_arbeideren: {navn: Den utrygge arbeideren, kort: "Stram økonomi, løs tilknytning til arbeidslivet eller lav inntekt. Lite forutsigbarhet."}
+  etablerte_midten: {navn: Den etablerte midten, kort: "Stabil jobb eller pensjon, middels inntekt og tillit. Ryggraden i samfunnet."}
+
+resiliens:
+  tillitsfulle_optimister: {navn: De tillitsfulle optimistene, kort: "Høy tillit til myndighetene og god økonomi. Tar kriser med ro og følger råd."}
+  fellesskapsbyggerne: {navn: Fellesskapsbyggerne, kort: "Sterke nettverk, mindre avhengig av systemet. Organiserer nabohjelp når krisen kommer."}
+  sarbare_individualister: {navn: De sårbare individualistene, kort: "Lite nettverk og lav tillit eller svak økonomi. Trekker seg tilbake når det røyner på."}
+  stodige_midten: {navn: Den stødige midten, kort: "Middels tillit, nettverk og buffer. Klarer seg, men uten store reserver."}

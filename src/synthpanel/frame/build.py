@@ -221,10 +221,16 @@ def build() -> dict:
     from synthpanel.leisure import layer as leisure
     a = leisure.attach(a, rng)
     leisure_cols = [c for c in [*leisure.COLUMNS, leisure.FREQ_COL] if c in a.columns]
+    # L3 – arketypelaget (tolkninger av lagene over; ingen tilfeldige trekk)
+    from synthpanel.archetypes import lens
+    arch_cols = []
+    if donors is not None:
+        a = lens.attach(a, donors)
+        arch_cols = list(lens.COLUMNS)
     a.insert(0, "agent_id", [f"NO-{i:06d}" for i in range(len(a))])
     a = a[["agent_id", "kommune", "kommune_navn", "fylke", "fylke_navn", "sentralitet",
            "kjonn", "alder", "aldersband", "utdanning", "bakgrunn", "innvkat",
-           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "eierstatus", "boligtype", *value_cols, *pol_cols, *media_cols, *leisure_cols, "vekt"]]
+           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "eierstatus", "boligtype", *value_cols, *pol_cols, *media_cols, *leisure_cols, *arch_cols, "vekt"]]
 
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     a.to_parquet(config.PROCESSED_DIR / "agents.parquet", index=False)

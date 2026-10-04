@@ -175,6 +175,24 @@ tiers:
           - {key: religiositet, title: Religiøsitet, values: {lav: Lav, middels: Middels, høy: Høy}, phrase: "med {} religiøsitet"}
           - {key: politisk_sted, title: Politisk ståsted, values: {venstre: Venstre, sentrum: Sentrum, høyre: Høyre}, phrase: "som plasserer seg {} politisk"}
 
+  - id: arketype
+    title: Arketyper
+    lead: Hvem de er som mennesker og samfunnsborgere
+    note: Tolkninger regnet ut fra lagene over (verdier, kapital, tillit, nettverk) – ikke egne målinger.
+    sections:
+      - id: personlighet
+        title: Arketypehjul og verdikart
+        estimate: true
+        dims:
+          - {key: arketype, title: Arketype, values: "archetypes:arketyper", phrase: "som er {}"}
+          - {key: verdikart, title: Verdikart, values: "archetypes:verdikart.felt", phrase: "som er {}"}
+      - id: samfunn
+        title: Samfunnsrolle og kriseresiliens
+        estimate: true
+        dims:
+          - {key: samfunnsrolle, title: Samfunnsrolle, values: "archetypes:samfunnsroller", phrase: "i rollen {}"}
+          - {key: resiliens, title: Kriseresiliens, values: "archetypes:resiliens", phrase: "blant {}"}
+
 binary_groups:
   daglig: {title: Bruker daglig, phrase: "som bruker {} daglig"}
   netthandel: {title: Har handlet på nett siste år, phrase: "som har kjøpt {} på nett"}

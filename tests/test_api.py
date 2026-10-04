@@ -44,8 +44,8 @@ def test_frontend_served_and_docs_still_work():
 
 def test_dimensions_config_matches_data():
     cfg = client.get("/dimensions").json()
-    assert [t["id"] for t in cfg["tiers"]] == ["hygiene", "motivasjon", "verdi"]
-    assert all(s["tier"] in ("hygiene", "motivasjon", "verdi") for s in cfg["sections"])
+    assert [t["id"] for t in cfg["tiers"]] == ["hygiene", "motivasjon", "verdi", "arketype"]
+    assert all(s["tier"] in ("hygiene", "motivasjon", "verdi", "arketype") for s in cfg["sections"])
     secs = cfg["sections"]
     keys = [d["key"] for s in secs for d in s["dims"]]
     assert {"kjonn", "fylke", "parti_2025"} <= set(keys)
@@ -72,7 +72,7 @@ def test_personas_cover_segment_and_respect_filters():
     assert [p["andel"] for p in ps] == sorted((p["andel"] for p in ps), reverse=True)
     assert all(p["kjonn"] == "kvinne" and 67 <= p["alder"] <= 79 for p in ps)
     assert len({p["navn"] for p in ps}) == len(ps)
-    assert set(ps[0]["profil"]) == {"hygiene", "motivasjon", "verdi"}
+    assert set(ps[0]["profil"]) == {"hygiene", "motivasjon", "verdi", "arketype"}
     from synthpanel.api.main import _personas_cached
     _personas_cached.cache_clear()
     again = client.get("/population/personas", params=q).json()["personas"]

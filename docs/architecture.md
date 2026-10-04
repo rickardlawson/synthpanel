@@ -13,9 +13,48 @@ verdifulle er ofte **gapet** mellom de to.
 | **L0 Befolkningsramme** | Kjønn, alder, kommune, fylke, sentralitet, utdanning, landbakgrunn, innvandringskategori, hovedstatus (arbeid/studier/pensjon/trygd), husholdningstype, lavinntekt, inntektsdesil. Neste: yrke/næring, bolig | SSB | ✅ v0.2 |
 | **L1 Fasitbibliotek – atferd** | Valgresultater, mediebruk, forbruk, dagligvare, kjente meningsmålinger. Lagres som *fordelinger med metadata* (kilde, år, spørsmål, populasjon, usikkerhet) | SSB, Valgundersøkelsen, Medietilsynet, publiserte målinger | ⏳ |
 | **L2 Verdilag** | Schwartz-verdier (fire hovedretninger), tillit, risikovilje, klimabekymring, religiøsitet, politisk ståsted og interesse. Neste: frivillighet, mediebruk, Medborgerpanelet | ESS runde 9–11 (ev. Norsk Monitor på lisens) | ✅ v0.3 |
-| **L3 Arketyper / personas** | v0: «Ti på gata» – de største grupperingene i hvilket som helst utvalg, vist som representative personer (se under). Neste: faste arketyper (latent klasseanalyse på L2) | Avledet | 🟡 v0 |
+| **L3 Arketyper / personas** | Arketypelaget: verdikart, Jungs arketypehjul, samfunnsroller og kriseresiliens (se under). «Ti på gata»: de største grupperingene i et utvalg som representative personer | Avledet | ✅ v1 |
 | **L4 Scenariomotor** | Stimulus inn → reaksjon per segment ut, med usikkerhet, volumvekt og spredning over tid (first movers → etternølere) | LLM + kalibrering | Kontrakt i `POST /estimate` |
 | **L5 Mediekobling** | Fersk kontekst fra Signalist (Brands / People / Debates) | Signalist API | Senere – via avtale |
+
+## Arketypelaget (L3) – fire linser
+
+Arketypene er *tolkninger* regnet ut fra det panelet allerede vet, ikke egne
+trekninger: samme agent får alltid samme arketyper, og hver regel står i
+`configs/archetypes.yaml` (`src/synthpanel/archetypes/lens.py`). Grunnlaget er
+Schwartz' ti grunnverdier fra de 21 ESS-spørsmålene (sentrert per person) for
+agentens ESS-donor, pluss registerdata.
+
+1. **Verdikartet.** x = åpenhet for endring − bevaring (tradisjonell → moderne),
+   y = selvoverskridelse − selvhevdelse (materialistisk → idealistisk), i
+   standardavvik. Fire felt delt ved befolkningens median (≈ 25 % hver).
+   Inspirert av sosiokulturelle verdikart (som Norsk Monitor), men et åpent,
+   eget mål – ikke Ipsos' modell.
+2. **Arketypehjulet.** Jungs tolv arketyper (Mark & Pearson) er definert som
+   profiler over grunnverdiene (+ tillit og lykke), f.eks. Utforskeren = høy
+   selvstendighet og stimulans, lav konformitet. Personen får den profilen hen
+   ligner mest på (cosinus mot standardiserte verdier), og en sekundær arketype.
+   Fordelingen blir det dataene sier (3–17 % per arketype). Kontroll: Rebellen er
+   yngst, Den uskyldige og Den vanlige eldre og oftere kvinner, Den vise har mest
+   høyere utdanning.
+3. **Samfunnsroller** (Bourdieu-inspirert), første regel som slår til:
+   teknokraten (desil 9–10, eier, lang høyere utdanning, tillit ikke lav) ·
+   den kulturelle eliten (høyere utdanning, idealistisk, sentralt) ·
+   systemskeptikeren (laveste ~20 % tillit og lav tilfredshet med demokratiet
+   eller lav tillit til folk) · den utrygge arbeideren (under 67 og lavinntekt,
+   vanskelig opplevd inntekt eller utenfor arbeid) · den etablerte midten.
+4. **Kriseresiliens**: tillit til systemet × nettverk (sosiale treff, fortrolige,
+   tillit til folk) × økonomisk buffer (opplevd inntekt, desil, lavinntekt) →
+   tillitsfulle optimister, fellesskapsbyggere, sårbare individualister og den
+   stødige midten.
+
+Nye ESS-spørsmål for dette: `sclmeet`, `inprdsc`, `hincfel`, `stfdem`.
+Personaene får arketype, verdikartfelt, samfunnsrolle og resiliens i profil og
+brief, og budskapstesten viser reaksjon per arketype.
+
+**Forbehold:** Jungs arketyper er et tolkningsspråk fra merkevarebygging, ikke
+et psykometrisk mål – styrken ligger i Schwartz-verdiene de er oversatt fra.
+Rollenavnene er nøytrale med vilje og skal ikke brukes til politisk målretting.
 
 ## Fritidslag (trening og friluftsliv)
 
@@ -279,7 +318,7 @@ Opoint-data avtales eksplisitt før kobling.
 4b. ✅ Nytt grensesnitt: målgruppebygger med kategorier (styrt av `configs/dimensions.yaml`), resultatpanel med steder (størst/tettest + lift) og kjennetegn (`/population/places`, `/population/profile`)
 5. Forbruksprofil (SSB forbruksundersøkelse), fritid; Mediebarometer-mikrodata (Sikt)
 6. Utvidet testsett: Norsk medborgerpanel og publiserte målinger
-7. L3 faste arketyper (latent klasseanalyse på verdilaget)
+7. ✅ L3 arketypelag: verdikart, arketypehjul, samfunnsroller, kriseresiliens
 8. ✅ L4 v0: still personaene spørsmål, test budskap på tvers av galleriet, samtale med én persona
 8b. ✅ Fritidslag (SSB idrett og friluftsliv) og første fasit: merketest mot BI Norsk kundebarometer
 8c. L4: kalibrere budskapstesten mot kjente utfall (pilotcasene)

@@ -22,7 +22,12 @@ VALUE_ITEMS = ["ipcrtiv", "imprich", "ipeqopt", "ipshabt", "impsafe", "impdiff",
                "ipadvnt", "ipbhprp", "iprspot", "iplylfr", "impenv", "imptrad", "impfun"]
 
 OTHER_ITEMS = ["ppltrst", "trstprl", "trstlgl", "trstplc", "trstplt", "polintr", "lrscale",
-               "rlgdgr", "happy", "wrclmch", "ccrdprs"]
+               "rlgdgr", "happy", "wrclmch", "ccrdprs",
+               # Arketypelaget (samfunnsroller, kriseresiliens):
+               "sclmeet",   # hvor ofte man treffer venner/familie sosialt (1 aldri – 7 hver dag)
+               "inprdsc",   # antall man kan snakke fortrolig med (0 ingen – 6 ti eller flere)
+               "hincfel",   # opplevd inntekt (1 lever komfortabelt – 4 svært vanskelig)
+               "stfdem"]    # tilfredshet med demokratiet (0–10)
 
 DEMOGRAPHICS = ["idno", "essround", "gndr", "agea", "eisced", "hinctnta", "region", "domicil",
                 "mnactic", "brncntr", "facntr", "mocntr", "hhmmb", "pspwght", "anweight", "vote"]
@@ -34,11 +39,10 @@ _COMMON = {1: "RØDT", 2: "SV", 3: "A", 4: "V", 5: "KRF", 6: "SP", 7: "H", 8: "F
 PARTY_CODES = {2017: {**_COMMON, 9: "ANDRE", 10: "MDG"},   # 9 = Kystpartiet
                2021: {**_COMMON, 9: "MDG", 10: "ANDRE"}}   # 10 = Pasientfokus
 
-# Koder for «vet ikke», «nekter» osv. per skala.
-MISSING = {6: {7, 8, 9}, 10: {77, 88, 99}, 5: {7, 8, 9}, 4: {7, 8, 9}}
 SCALE_MAX = {**{v: 6 for v in VALUE_ITEMS}, "ppltrst": 10, "trstprl": 10, "trstlgl": 10, "trstplc": 10,
              "trstplt": 10, "lrscale": 10, "rlgdgr": 10, "happy": 10, "polintr": 4, "wrclmch": 5,
-             "ccrdprs": 10}
+             "ccrdprs": 10, "sclmeet": 7, "inprdsc": 6, "hincfel": 4, "stfdem": 10}
+SCALE_MIN = {"inprdsc": 0}
 
 
 def _download(doi: str, user_id: str) -> pd.DataFrame:
@@ -69,8 +73,8 @@ def harmonize(d: pd.DataFrame, rnd: int | None = None) -> pd.DataFrame:
             d[c] = np.nan
             continue
         top = SCALE_MAX[c]
-        bad = MISSING.get(top, set()) | MISSING.get(6 if top == 6 else top, set())
-        d[c] = d[c].where(~d[c].isin(bad) & d[c].between(0 if top == 10 else 1, top))
+        lo = SCALE_MIN.get(c, 0 if top == 10 else 1)
+        d[c] = d[c].where(d[c].between(lo, top))   # alt utenfor skalaen er «vet ikke», «nekter» o.l.
     d["hinctnta"] = d["hinctnta"].where(d["hinctnta"].between(1, 10))
     d["eisced"] = d["eisced"].where(d["eisced"].between(1, 7))
     d["agea"] = d["agea"].where(d["agea"].between(15, 110))

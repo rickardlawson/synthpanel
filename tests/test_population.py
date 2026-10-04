@@ -55,9 +55,9 @@ def test_education_by_fylke_matches_ssb(agents):
 
 
 def test_every_agent_has_complete_profile(agents):
-    # score_* er kontinuerlige verdimål og kan mangle når donoren ikke svarte;
-    # kategoriene står da som «ukjent».
-    cols = [c for c in agents.columns if not c.startswith("score_")]
+    # score_* og verdikart_x/y er kontinuerlige verdimål og kan mangle når donoren
+    # ikke svarte; kategoriene står da som «ukjent».
+    cols = [c for c in agents.columns if not c.startswith(("score_", "verdikart_"))]
     assert agents[cols].notna().all().all()
 
 
@@ -271,3 +271,19 @@ def test_leisure_matches_ssb_and_gradients(agents):
     weekly = agents[agents["treningsfrekvens"] == "ukentlig"]
     rare = agents[agents["treningsfrekvens"] == "sjelden"]
     assert share(weekly, "trening_lop") > 1.5 * share(rare, "trening_lop")     # aktive gjør mer
+
+
+def test_archetypes_are_plausible(agents):
+    if "arketype" not in agents.columns:
+        pytest.skip("arketypelag ikke bygget")
+    w = agents["vekt"]
+    shares = agents.groupby("arketype")["vekt"].sum() / w.sum()
+    assert shares.drop("ukjent", errors="ignore").between(0.02, 0.25).all()   # ingen dominerer, ingen er tomme
+    age = lambda d: (d["alder"] * d["vekt"]).sum() / d["vekt"].sum()  # noqa: E731
+    assert age(agents[agents["arketype"] == "rebellen"]) < age(agents[agents["arketype"] == "uskyldige"]) - 10
+    quad = agents.groupby("verdikart")["vekt"].sum() / w.sum()
+    assert quad.drop("ukjent", errors="ignore").between(0.18, 0.32).all()     # median-delt: omtrent fire like
+    roles = agents.groupby("samfunnsrolle")["vekt"].sum() / w.sum()
+    assert roles["etablerte_midten"] > 0.4 and roles["teknokraten"] < 0.12
+    tek = agents[agents["samfunnsrolle"] == "teknokraten"]
+    assert (tek["inntektsdesil"] >= 9).all()

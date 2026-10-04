@@ -67,6 +67,12 @@ DIMENSIONS.update({c: f"Medie/netthandel: {lab} (ja/nei)" for c, lab in _MEDIA.i
 from synthpanel.leisure.layer import COLUMNS as _LEISURE  # noqa: E402
 DIMENSIONS.update({c: f"Trening/friluftsliv siste 12 mnd: {lab} (ja/nei)" for c, lab in _LEISURE.items()})
 DIMENSIONS["treningsfrekvens"] = "Hvor ofte de trener: ukentlig, av_og_til (månedlig), sjelden"
+DIMENSIONS.update({
+    "arketype": "Arketype (Jungs tolv, fra Schwartz-verdiene) – se /archetypes",
+    "verdikart": "Felt i verdikartet: tradisjonell/moderne × materialist/idealist",
+    "samfunnsrolle": "Samfunnsrolle (kapital, tillit, utrygghet)",
+    "resiliens": "Kriseresiliens (tillit, nettverk, økonomisk buffer)",
+})
 
 
 # Filtermodellen genereres fra DIMENSIONS, så nye dimensjoner bare trenger én linje over.
@@ -128,7 +134,20 @@ class ProfileParams(Filters):
 
 @lru_cache
 def dimension_config() -> dict:
-    return config.load("dimensions")
+    """dimensions.yaml, med verdilister fra archetypes.yaml der det står «archetypes:…»."""
+    import copy
+    cfg = copy.deepcopy(config.load("dimensions"))
+    arch = config.load("archetypes")
+    for t in cfg["tiers"]:
+        for sec in t["sections"]:
+            for d in sec["dims"]:
+                v = d.get("values")
+                if isinstance(v, str) and v.startswith("archetypes:"):
+                    node = arch
+                    for part in v.split(":", 1)[1].split("."):
+                        node = node[part]
+                    d["values"] = {k: x["navn"] for k, x in node.items()}
+    return cfg
 
 
 def config_sections() -> list[dict]:
@@ -341,6 +360,64 @@ def personas_chat(req: ChatRequest):
     if p is None:
         raise HTTPException(404, "Fant ikke personaen i dette utvalget.")
     return {"id": p["id"], "svar": _voice_errors(lambda: voice.chat(p, [m.model_dump() for m in req.meldinger]))}
+
+
+@app.get("/archetypes")
+def archetypes_config():
+    """Definisjonene bak arketypelaget (navn, korte beskrivelser, profiler)."""
+    return config.load("archetypes")
+
+
+@app.get("/population/archetypes")
+def population_archetypes(f: Annotated[Filters, Query()]):
+    """Arketypehjul, verdikart, samfunnsroller og kriseresiliens for utvalget,
+    med andel i utvalget, andel i befolkningen og lift. Verdikartet har i tillegg
+    et 16×16-rutenett (andel av utvalget/befolkningen per rute, akser i standardavvik)."""
+    cond, params, _ = _cond(f)
+    con = _con()
+    cfg = config.load("archetypes")
+    cols = set(con.execute("SELECT * FROM agents LIMIT 0").df().columns)
+    if "arketype" not in cols:
+        raise HTTPException(404, "Arketypelaget er ikke bygget (krever ESS-data).")
+    seg_total, total, n = con.execute(
+        f"SELECT SUM(vekt) FILTER (WHERE {cond}), SUM(vekt), COUNT(*) FILTER (WHERE {cond}) FROM agents",
+        params + params).fetchone()
+    seg_total = seg_total or 0.0
+
+    def shares(col: str, spec: dict) -> list[dict]:
+        rows = dict((k, (s or 0.0, p)) for k, s, p in con.execute(
+            f"SELECT {col}, SUM(vekt) FILTER (WHERE {cond}), SUM(vekt) FROM agents GROUP BY 1", params).fetchall())
+        out = []
+        for k, meta in spec.items():
+            s, p = rows.get(k, (0.0, 0.0))
+            a_s, a_p = (s / seg_total if seg_total else 0.0), p / total
+            out.append({"kode": k, **{x: meta[x] for x in ("navn", "kort", "motiv") if x in meta},
+                        "andel_segment": a_s, "andel_befolkning": a_p, "lift": a_s / a_p if a_p else None})
+        return out
+
+    N, E = 16, 2.5
+    def grid(where: str, prm: list) -> list[list[float]]:
+        rows = con.execute(f"""
+            SELECT LEAST({N - 1}, GREATEST(0, CAST(FLOOR((verdikart_x + {E}) / {2 * E / N}) AS INT))) AS gx,
+                   LEAST({N - 1}, GREATEST(0, CAST(FLOOR((verdikart_y + {E}) / {2 * E / N}) AS INT))) AS gy,
+                   SUM(vekt) FROM agents WHERE verdikart_x IS NOT NULL AND {where} GROUP BY 1, 2""", prm).fetchall()
+        g = [[0.0] * N for _ in range(N)]
+        tot = sum(r[2] for r in rows) or 1.0
+        for gx, gy, v in rows:
+            g[gy][gx] = v / tot
+        return g
+    mean = con.execute(f"SELECT SUM(verdikart_x * vekt) / SUM(vekt), SUM(verdikart_y * vekt) / SUM(vekt) "
+                       f"FROM agents WHERE verdikart_x IS NOT NULL AND {cond}", params).fetchone()
+    med = con.execute("SELECT median(verdikart_x), median(verdikart_y) FROM agents WHERE verdikart_x IS NOT NULL").fetchone()
+    return {
+        "agenter": n, "presisjon": _precision_note(n),
+        "arketyper": shares("arketype", cfg["arketyper"]),
+        "verdikart": {"felt": shares("verdikart", cfg["verdikart"]["felt"]),
+                      "rutenett": {"n": N, "utstrekning": E, "segment": grid(cond, params), "befolkning": grid("TRUE", [])},
+                      "snitt_segment": {"x": mean[0], "y": mean[1]}, "median": {"x": med[0], "y": med[1]}},
+        "samfunnsroller": shares("samfunnsrolle", cfg["samfunnsroller"]),
+        "resiliens": shares("resiliens", cfg["resiliens"]),
+    }
 
 
 @app.get("/health")

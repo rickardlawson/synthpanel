@@ -16,7 +16,7 @@
     --fjord:#7FB6D9; --apricot:#F0A27A; --up:#F0A27A; --down:#7FB6D9;
     --warn:#E6B566; --focus:#F0A27A;
     /* Verdihierarkiet: tre lag med hver sin farge */
-    --t-hygiene:#7FB6D9; --t-motivasjon:#F0A27A; --t-verdi:#C4A8EE;
+    --t-hygiene:#7FB6D9; --t-motivasjon:#F0A27A; --t-verdi:#C4A8EE; --t-arketype:#E6C77A;
     --mono:"JetBrains Mono", ui-monospace, monospace;
   }
   *{box-sizing:border-box}
@@ -179,6 +179,24 @@
   .skel .ph{animation:pulse 1.2s ease-in-out infinite}
   @keyframes pulse{50%{opacity:.5}}
 
+  /* Arketyper */
+  .arch-grid{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:28px; align-items:start}
+  .arch-grid h3, .arch-lists h3{margin:0 0 4px; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--t-arketype)}
+  .arch-grid p.sub2, .arch-lists p.sub2{margin:0 0 10px; color:var(--ink-3); font-size:.82rem}
+  svg.wheel, svg.vmap{width:100%; height:auto; display:block}
+  .wheel .wedge{cursor:pointer; transition:opacity .15s}
+  .wheel .wedge:hover{opacity:1 !important}
+  .wheel text, .vmap text{font-family:"Schibsted Grotesk", system-ui, sans-serif; fill:var(--ink-2)}
+  .wheel .lab{font-size:12px} .wheel .lab tspan.p{fill:var(--ink-3); font-family:var(--mono); font-size:10.5px}
+  .wheel .lab.sel{fill:var(--t-arketype); font-weight:600}
+  .vmap .q{cursor:pointer} .vmap .qn{font-size:11.5px; font-weight:600} .vmap .qs{font-family:var(--mono); font-size:10.5px; fill:var(--ink-2)}
+  .vmap .q text{paint-order:stroke; stroke:var(--bg); stroke-width:4px; stroke-linejoin:round}
+  .arch-key{display:flex; gap:14px; flex-wrap:wrap; color:var(--ink-3); font-size:.78rem; margin-top:6px}
+  .arch-key i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px}
+  .arch-lists{display:grid; grid-template-columns:1fr 1fr; gap:26px; margin-top:26px}
+  .pcard .arch{font-size:.76rem; color:var(--t-arketype)}
+  @media (max-width:1100px){ .arch-grid, .arch-lists{grid-template-columns:1fr} }
+
   /* Spør panelet */
   :root{--pos:#8FCB9B; --neg:#E3878A}
   .askp{background:var(--panel-2); border:1px solid var(--rule-2); border-radius:14px; padding:14px 16px; margin:0 0 18px}
@@ -297,6 +315,7 @@
 
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected="false" data-tab="personas">Ti på gata</button>
+        <button role="tab" aria-selected="false" data-tab="arketyper">Arketyper</button>
         <button role="tab" aria-selected="true" data-tab="steder">Steder</button>
         <button role="tab" aria-selected="false" data-tab="kjennetegn">Kjennetegn</button>
         <button role="tab" aria-selected="false" data-tab="fordelinger">Alle fordelinger</button>
@@ -315,6 +334,21 @@
         </div>
         <div id="verdict"></div>
         <div class="gallery" id="gallery"></div>
+      </div>
+
+      <div id="tab-arketyper" role="tabpanel" hidden>
+        <p class="gal-note">Tolkninger regnet ut fra panelets data – verdiene fra ESS, kapital og tillit – ikke egne målinger. Klikk i hjulet eller kartet for å velge.</p>
+        <div class="arch-grid">
+          <div><h3>Arketypehjulet</h3><p class="sub2">Jungs tolv arketyper, utledet fra Schwartz-verdiene. Lengden viser andelen i utvalget, streken andelen i hele befolkningen.</p>
+            <svg class="wheel" id="wheel" viewBox="-40 -10 620 560" role="img" aria-label="Arketypehjul"></svg>
+            <div class="arch-key"><span><i style="background:var(--apricot)"></i>Overrepresentert</span><span><i style="background:#5F7376"></i>Som snittet</span><span><i style="background:var(--fjord)"></i>Underrepresentert</span></div></div>
+          <div><h3>Verdikartet</h3><p class="sub2">Hvor utvalget ligger mellom tradisjonell og moderne, materialistisk og idealistisk. Grått er hele befolkningen.</p>
+            <svg class="vmap" id="vmap" viewBox="0 0 420 420" role="img" aria-label="Verdikart"></svg></div>
+        </div>
+        <div class="arch-lists">
+          <div class="list"><h3>Samfunnsrolle</h3><p class="sub2">Kapital, tillit og utrygghet</p><div id="roles"></div></div>
+          <div class="list"><h3>Kriseresiliens</h3><p class="sub2">Tillit til systemet, nettverk og økonomisk buffer</p><div id="resil"></div></div>
+        </div>
       </div>
 
       <div id="tab-steder" role="tabpanel">
@@ -570,6 +604,7 @@ async function refresh(){
     renderStory(size, pl, pr, fp);
     if (tab === "fordelinger") await renderDists(fp, my);
     if (tab === "personas") await renderPersonas(fp, my);
+    if (tab === "arketyper") await renderArchetypes(fp, my);
   } catch(e){
     $("err").textContent = "Fikk ikke kontakt med panelet. Sjekk at serveren kjører (make serve) og last siden på nytt.";
     $("err").hidden = false;
@@ -701,7 +736,21 @@ function renderVerdict(sm){
   v.innerHTML = `<div class="verdict"><span class="score ${scoreCls(h)}">${(h > 0 ? "+" : h < 0 ? "−" : "") + Math.abs(h).toFixed(1).replace(".", ",")}</span>
     <div><div style="font-size:.88rem;margin-bottom:6px">${pct(sm.andel_positive)} positive · ${pct(neu)} nøytrale · ${pct(sm.andel_negative)} negative</div>
     <div class="dbar"><i style="width:${sm.andel_negative*100}%;background:var(--neg)"></i><i style="width:${neu*100}%;background:var(--ink-3)"></i><i style="width:${sm.andel_positive*100}%;background:var(--pos)"></i></div></div>
+    ${byArchetype()}
     <small>Holdning fra −2 til +2, vektet med hvor stor hver gruppering er. AI-simulerte reaksjoner fra ${sm.antall_svar} personas – en indikasjon på hvordan gruppene resonnerer, ikke en måling.</small></div>`;
+}
+
+function byArchetype(){
+  // Reaksjon per arketype blant personaene (vektet med grupperingenes andel)
+  const acc = {};
+  for (const p of PERSONAS){
+    const r = RESP[p.id]; if (!r || r.holdning == null || !p.arketype) continue;
+    const a = (acc[p.arketype] ??= {w: 0, s: 0}); a.w += p.andel; a.s += p.andel * r.holdning;
+  }
+  const items = Object.entries(acc).map(([k, v]) => [k, v.s / v.w]).sort((a, b) => b[1] - a[1]);
+  if (items.length < 2) return "";
+  return `<div style="grid-column:1/-1;font-size:.84rem;color:var(--ink-2)">Etter arketype: ${items.map(([k, v]) =>
+    `<span style="white-space:nowrap">◆ ${esc(labelOf("arketype", k))} <b class="${scoreCls(Math.round(v))}">${(v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1).replace(".", ",")}</b></span>`).join(" · ")}</div>`;
 }
 
 async function askPanel(){
@@ -763,6 +812,7 @@ async function renderPersonas(fp, my){
       <div class="share">${pct(p.andel)}<i><b style="width:${(p.andel / maxA * 100).toFixed(0)}%"></b></i></div>
       <div class="nm">${esc(p.navn)} <span>${p.alder}</span></div>
       <div class="ttl">${esc(p.tittel)}</div>
+      ${p.arketype && BYKEY.arketype ? `<div class="arch">◆ ${esc(labelOf("arketype", p.arketype))}</div>` : ""}
       <div class="tr">${p.kjennetegn.slice(0, 2).map(k => `<span>${tdot(k.dim)}${esc(k.tekst)}</span>`).join("")}</div>
       <div class="ans" data-id="${p.id}"></div>`;
     b.onclick = () => openPersona(i);
@@ -832,11 +882,95 @@ function openPersona(i){
 
 function alertInline(host, text){ host.insertAdjacentHTML("beforeend", `<div class="msg assistant" style="color:var(--warn)">${esc(text)}</div>`); }
 
+/* ---------- Arketyper ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const liftColor = l => l == null ? "#5F7376" : l >= 1.15 ? "var(--apricot)" : l <= 0.87 ? "var(--fjord)" : "#5F7376";
+function arcPath(cx, cy, r0, r1, a0, a1){
+  const p = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  const [x0, y0] = p(r1, a0), [x1, y1] = p(r1, a1), [x2, y2] = p(r0, a1), [x3, y3] = p(r0, a0);
+  const big = a1 - a0 > Math.PI ? 1 : 0;
+  return `M${x0},${y0} A${r1},${r1} 0 ${big} 1 ${x1},${y1} L${x2},${y2} A${r0},${r0} 0 ${big} 0 ${x3},${y3} Z`;
+}
+async function renderArchetypes(fp, my){
+  let d;
+  try { d = await get("/population/archetypes", fp); } catch(e){ $("wheel").innerHTML = ""; return; }
+  if (my !== seq) return;
+  drawWheel(d.arketyper); drawMap(d.verdikart);
+  for (const [host, rows, key] of [["roles", d.samfunnsroller, "samfunnsrolle"], ["resil", d.resiliens, "resiliens"]]){
+    const el = $(host); el.innerHTML = "";
+    const max = Math.max(...rows.map(r => r.andel_segment), 0.0001);
+    for (const r of rows){
+      const row = itemRow(esc(r.navn), "", pct(r.andel_segment), r.lift, r.andel_segment / max,
+        `<strong>${esc(r.navn)}</strong><br>${esc(r.kort)}<br>I utvalget: ${pct(r.andel_segment)} · befolkningen: ${pct(r.andel_befolkning)}`);
+      row.style.cursor = "pointer"; row.onclick = () => toggle(key, r.kode, !state[key].has(r.kode));
+      el.appendChild(row);
+    }
+  }
+}
+function drawWheel(rows){
+  const svg = $("wheel"), cx = 270, cy = 270, r0 = 56, r1 = 182, n = rows.length, step = 2 * Math.PI / n;
+  const max = Math.max(...rows.flatMap(r => [r.andel_segment, r.andel_befolkning]), 0.0001);
+  const rad = v => r0 + (r1 - r0) * Math.sqrt(v / max);
+  let h = `<circle cx="${cx}" cy="${cy}" r="${r1}" fill="none" stroke="var(--rule)" stroke-dasharray="2 4"/>`;
+  const groups = {};
+  rows.forEach((r, i) => { (groups[r.motiv] ??= []).push(i); });
+  for (const [m, idx] of Object.entries(groups)){   // motivringen: tynn bue + navn i hjørnet
+    const a0 = -Math.PI/2 + idx[0] * step + 0.02, a1 = -Math.PI/2 + (idx.at(-1) + 1) * step - 0.02;
+    h += `<path d="${arcPath(cx, cy, r1 + 6, r1 + 9, a0, a1)}" fill="var(--rule-2)"/>`;
+    const am = (a0 + a1) / 2, right = Math.cos(am) > 0, down = Math.sin(am) > 0;
+    h += `<text x="${right ? 570 : -30}" y="${down ? 535 : 8}" text-anchor="${right ? "end" : "start"}" style="font-size:10px;letter-spacing:.14em;fill:var(--ink-3)">${m.toUpperCase()}</text>`;
+  }
+  rows.forEach((r, i) => {
+    const a0 = -Math.PI/2 + i * step + 0.012, a1 = a0 + step - 0.024, am = (a0 + a1) / 2;
+    const sel = state.arketype?.has(r.kode);
+    h += `<path class="wedge" data-k="${r.kode}" d="${arcPath(cx, cy, r0, rad(r.andel_segment), a0, a1)}" fill="${liftColor(r.lift)}"
+            opacity="${sel ? 1 : 0.82}" stroke="${sel ? "var(--t-arketype)" : "none"}" stroke-width="2"
+            data-tip="<strong>${esc(r.navn)}</strong> · ${esc(r.motiv)}<br>${esc(r.kort)}<br>I utvalget: ${pct(r.andel_segment)} · befolkningen: ${pct(r.andel_befolkning)}<br>Lift ${lift(r.lift)}"/>`;
+    const rp = rad(r.andel_befolkning);
+    h += `<path d="M${cx + rp * Math.cos(a0)},${cy + rp * Math.sin(a0)} A${rp},${rp} 0 0 1 ${cx + rp * Math.cos(a1)},${cy + rp * Math.sin(a1)}" fill="none" stroke="var(--ink)" stroke-width="2" opacity=".75" pointer-events="none"/>`;
+    const lr = r1 + 26, lx = cx + lr * Math.cos(am), ly = cy + lr * Math.sin(am);
+    const anchor = Math.abs(Math.cos(am)) < 0.25 ? "middle" : Math.cos(am) > 0 ? "start" : "end";
+    h += `<text class="lab ${sel ? "sel" : ""}" x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle">${esc(r.navn.replace(/^Den /, "").replace(/^./, m => m.toUpperCase()))}<tspan class="p" x="${lx}" dy="13">${pct(r.andel_segment)}</tspan></text>`;
+  });
+  h += `<text x="${cx}" y="${cy - 6}" text-anchor="middle" style="font-size:11px;fill:var(--ink-3)">12</text><text x="${cx}" y="${cy + 9}" text-anchor="middle" style="font-size:11px;fill:var(--ink-3)">arketyper</text>`;
+  svg.innerHTML = h;
+  svg.querySelectorAll(".wedge").forEach(w => w.onclick = () => toggle("arketype", w.dataset.k, !state.arketype.has(w.dataset.k)));
+}
+function drawMap(vk){
+  const svg = $("vmap"), g = vk.rutenett, N = g.n, E = g.utstrekning, x0 = 46, y0 = 14, S = 360, c = S / N;
+  const toX = v => x0 + (v + E) / (2 * E) * S, toY = v => y0 + S - (v + E) / (2 * E) * S;
+  const maxP = Math.max(...g.befolkning.flat()), maxS = Math.max(...g.segment.flat(), 1e-9);
+  let h = `<rect x="${x0}" y="${y0}" width="${S}" height="${S}" fill="var(--bg)" stroke="var(--rule)"/>`;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++){
+    const p = g.befolkning[j][i], s2 = g.segment[j][i], x = x0 + i * c, y = y0 + S - (j + 1) * c;
+    if (p > 0) h += `<rect x="${x}" y="${y}" width="${c}" height="${c}" fill="var(--ink-3)" opacity="${(0.08 + 0.32 * p / maxP).toFixed(3)}"/>`;
+    if (s2 > 0) h += `<rect x="${x + 1}" y="${y + 1}" width="${c - 2}" height="${c - 2}" rx="2" fill="var(--t-arketype)" opacity="${(0.12 + 0.8 * Math.sqrt(s2 / maxS)).toFixed(3)}"/>`;
+  }
+  const mx = toX(vk.median.x), my = toY(vk.median.y);
+  h += `<line x1="${mx}" y1="${y0}" x2="${mx}" y2="${y0 + S}" stroke="var(--ink-3)" stroke-dasharray="3 4"/>
+        <line x1="${x0}" y1="${my}" x2="${x0 + S}" y2="${my}" stroke="var(--ink-3)" stroke-dasharray="3 4"/>`;
+  const pos = {tradisjonell_idealist: [x0 + 8, y0 + 18, "start"], moderne_idealist: [x0 + S - 8, y0 + 18, "end"],
+               tradisjonell_materialist: [x0 + 8, y0 + S - 22, "start"], moderne_materialist: [x0 + S - 8, y0 + S - 22, "end"]};
+  for (const f of vk.felt){
+    const [x, y, a] = pos[f.kode]; const sel = state.verdikart?.has(f.kode);
+    h += `<g class="q" data-k="${f.kode}" data-tip="<strong>${esc(f.navn)}</strong><br>${esc(f.kort)}<br>I utvalget: ${pct(f.andel_segment)} · befolkningen: ${pct(f.andel_befolkning)}">
+      <text class="qn" x="${x}" y="${y}" text-anchor="${a}" style="fill:${sel ? "var(--t-arketype)" : "var(--ink)"}">${esc(f.kode.replace("_", " ").replace(/^./, m => m.toUpperCase()))}</text>
+      <text class="qs" x="${x}" y="${y + 14}" text-anchor="${a}">${pct(f.andel_segment)} · <tspan style="fill:${liftColor(f.lift)}">${lift(f.lift)}</tspan></text></g>`;
+  }
+  const s = vk.snitt_segment;
+  if (s && s.x != null) h += `<circle cx="${toX(s.x)}" cy="${toY(s.y)}" r="6" fill="none" stroke="var(--ink)" stroke-width="2"/><circle cx="${toX(s.x)}" cy="${toY(s.y)}" r="2" fill="var(--ink)"/>`;
+  h += `<text x="${x0 + S / 2}" y="${y0 + S + 26}" text-anchor="middle" style="font-size:11px;fill:var(--ink-3)">Tradisjonell ←  → Moderne</text>
+        <text transform="translate(${x0 - 16},${y0 + S / 2}) rotate(-90)" text-anchor="middle" style="font-size:11px;fill:var(--ink-3)">Materialistisk ←  → Idealistisk</text>`;
+  svg.innerHTML = h;
+  svg.querySelectorAll(".q").forEach(q => q.onclick = () => toggle("verdikart", q.dataset.k, !state.verdikart.has(q.dataset.k)));
+}
+
 /* ---------- Faner, nivå, verktøytips ---------- */
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
   document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
-  for (const t of ["personas", "steder", "kjennetegn", "fordelinger"]) $("tab-" + t).hidden = t !== tab;
+  for (const t of ["personas", "arketyper", "steder", "kjennetegn", "fordelinger"]) $("tab-" + t).hidden = t !== tab;
+  if (tab === "arketyper") renderArchetypes(filters(), seq);
   if (tab === "fordelinger") renderDists(filters(), seq);
   if (tab === "personas") renderPersonas(filters(), seq);
 });
