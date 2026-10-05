@@ -283,6 +283,43 @@
     .card{padding:18px 16px}
     .toolbar{flex-wrap:wrap}
   }
+  /* ---------- Kart ---------- */
+  .maptools{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:-2px 0 12px}
+  .maptools .seg{margin-left:0}
+  .maptools select{background:var(--panel-2); border:1px solid var(--rule-2); color:var(--ink); border-radius:8px; padding:4px 8px; font:inherit; font-size:.82rem}
+  .maptools label.chk{display:inline-flex; align-items:center; gap:6px; color:var(--ink-3); font-size:.8rem; margin-left:auto; cursor:pointer}
+  .mapwrap{position:relative; height:min(68vh, 640px); min-height:420px; border:1px solid var(--rule); border-radius:12px; overflow:hidden; background:#101618}
+  #map{position:absolute; inset:0}
+  .maplegend{position:absolute; left:10px; bottom:10px; max-width:min(320px, calc(100% - 20px)); background:rgba(18,25,27,.92);
+             border:1px solid var(--rule-2); border-radius:10px; padding:10px 12px; font-size:.76rem; color:var(--ink-2); z-index:2}
+  .maplegend h6{margin:0 0 6px; font-size:.76rem; color:var(--ink); font-weight:600}
+  .maplegend .ramp{height:8px; border-radius:4px; margin:4px 0 2px}
+  .maplegend .ends{display:flex; justify-content:space-between; color:var(--ink-3); font-size:.7rem}
+  .maplegend .cats{display:flex; flex-direction:column; gap:3px; max-height:170px; overflow-y:auto}
+  .maplegend .cats button{display:flex; align-items:center; gap:7px; background:none; border:0; padding:1px 0; color:var(--ink-2); cursor:pointer; text-align:left; font-size:.76rem}
+  .maplegend .cats button[aria-pressed="true"]{color:var(--ink); font-weight:600}
+  .maplegend .cats i{width:10px; height:10px; border-radius:3px; flex:none; background:var(--c)}
+  .maplegend .cats span.v{margin-left:auto; color:var(--ink-3); font-family:var(--mono); padding-left:8px}
+  .chips-row{display:flex; flex-wrap:wrap; gap:5px; margin:0 0 10px}
+  .chips-row button{background:none; border:1px solid var(--rule-2); border-radius:999px; padding:2px 10px; font-size:.78rem; color:var(--ink-2); cursor:pointer}
+  .chips-row button[aria-pressed="true"]{border-color:var(--apricot); color:var(--ink)}
+  .maplibregl-popup-content{background:var(--panel-2)!important; color:var(--ink); border:1px solid var(--rule-2); border-radius:10px!important; padding:12px 14px!important; font-size:.82rem; min-width:220px}
+  .maplibregl-popup-tip{border-top-color:var(--panel-2)!important; border-bottom-color:var(--panel-2)!important}
+  .maplibregl-popup-close-button{color:var(--ink-3); font-size:16px; padding:2px 6px}
+  .kpop h4{margin:0 0 2px; font-size:.95rem}
+  .kpop .k{color:var(--ink-3); font-size:.74rem; margin-bottom:8px}
+  .kpop table{border-collapse:collapse; width:100%; margin-bottom:8px}
+  .kpop td{padding:2px 0; color:var(--ink-2)} .kpop td:last-child{text-align:right; font-family:var(--mono); color:var(--ink)}
+  .kpop .btn{padding:5px 10px; font-size:.78rem}
+  .maplibregl-ctrl-attrib{background:rgba(18,25,27,.8)!important; color:var(--ink-3)!important; font-size:10px}
+  .maplibregl-ctrl-attrib a{color:var(--ink-2)!important}
+  .maplibregl-ctrl-group{background:var(--panel-2)!important} .maplibregl-ctrl-group button span{filter:invert(.85)}
+  /* ---------- Økonomi ---------- */
+  .eco-head{display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:22px}
+  .eco-head div{background:var(--panel-2); border:1px solid var(--rule); border-radius:12px; padding:12px 14px}
+  .eco-head small{color:var(--ink-3); font-size:.74rem; display:block}
+  .eco-head b{font-size:1.25rem; font-weight:600; font-variant-numeric:tabular-nums}
+  .eco-head span{color:var(--ink-3); font-size:.76rem}
   @media (prefers-reduced-motion:reduce){ .item .bar, .sec > button .chev{transition:none} }
 </style>
 </head>
@@ -315,7 +352,9 @@
 
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected="false" data-tab="personas">Ti på gata</button>
+        <button role="tab" aria-selected="false" data-tab="kart">Kart</button>
         <button role="tab" aria-selected="false" data-tab="arketyper">Arketyper</button>
+        <button role="tab" aria-selected="false" data-tab="okonomi">Økonomi</button>
         <button role="tab" aria-selected="true" data-tab="steder">Steder</button>
         <button role="tab" aria-selected="false" data-tab="kjennetegn">Kjennetegn</button>
         <button role="tab" aria-selected="false" data-tab="fordelinger">Alle fordelinger</button>
@@ -349,6 +388,29 @@
           <div class="list"><h3>Samfunnsrolle</h3><p class="sub2">Kapital, tillit og utrygghet</p><div id="roles"></div></div>
           <div class="list"><h3>Kriseresiliens</h3><p class="sub2">Tillit til systemet, nettverk og økonomisk buffer</p><div id="resil"></div></div>
         </div>
+      </div>
+
+      <div id="tab-kart" role="tabpanel" hidden>
+        <div class="maptools">
+          <div class="seg" role="group" aria-label="Hva kartet viser" id="mapModes">
+            <button data-mode="segment" aria-pressed="true">Målgruppen</button><button data-mode="fordeling" aria-pressed="false">Fordeling</button><button data-mode="snitt" aria-pressed="false">Inntekt og forbruk</button><button data-mode="befolkning" aria-pressed="false">Befolkning</button>
+          </div>
+          <select id="mapDim" aria-label="Dimensjon" hidden></select>
+          <select id="mapNum" aria-label="Tallvariabel" hidden></select>
+          <label class="chk"><input type="checkbox" id="mapBase" checked> Bakgrunnskart</label>
+        </div>
+        <div class="chips-row" id="mapCats" hidden></div>
+        <div class="mapwrap"><div id="map" role="region" aria-label="Kart over Norge"></div><div class="maplegend" id="mapLegend"></div></div>
+        <p class="note" id="mapNote"></p>
+      </div>
+
+      <div id="tab-okonomi" role="tabpanel" hidden>
+        <div class="eco-head" id="ecoHead"></div>
+        <div class="lists">
+          <div class="list"><h3><span>FORVENTET FORBRUK PER ÅR</span><span>MOT SNITT</span></h3><div id="ecoSpend"></div></div>
+          <div class="list"><h3><span>BIL I HUSHOLDNINGEN</span><span>MOT SNITT</span></h3><div id="ecoBuy"></div></div>
+        </div>
+        <p class="note" id="ecoNote"></p>
       </div>
 
       <div id="tab-steder" role="tabpanel">
@@ -443,7 +505,7 @@ function renderSections(){
     el.className = "sec"; el.dataset.open = openState.secs[sec.id] ? "true" : "false";
     const active = sec.dims.filter(d => state[d.key].size).length;
     el.innerHTML = `<button aria-expanded="${el.dataset.open}"><span>${sec.title}</span>
-      <span class="meta">${active ? active + " valgt · " : ""}${sec.dims.length} egenskaper <span class="chev" aria-hidden="true">›</span></span></button>
+      <span class="meta">${active ? active + " valgt · " : ""}${sec.dims.filter(d => !d.hidden).length} egenskaper <span class="chev" aria-hidden="true">›</span></span></button>
       <div class="sec-body">${sec.estimate ? `<p class="est">${TIERS[sec.tier].note}</p>` : ""}</div>`;
     el.querySelector("button").onclick = () => {
       openState.secs[sec.id] = el.dataset.open !== "true";
@@ -453,6 +515,7 @@ function renderSections(){
     const body = el.querySelector(".sec-body");
     const groups = {};
     for (const d of sec.dims){
+      if (d.hidden) continue;
       if (d.binary){ (groups[d.binary] ??= []).push(d); continue; }
       const sel = Object.keys(d.values).filter(v => state[d.key].has(v));
       body.appendChild(dimRow(d.key, d.title, sel.length ? sel.map(v => d.values[v]).join(", ") : "Alle", !!sel.length,
@@ -568,14 +631,19 @@ function describe(){
   }
   const fy = [...state.fylke].map(v => labelOf("fylke", v));
   if (fy.length) parts.push("i " + joinOr(fy));
+  const ko = [...(state.kommune || [])].map(v => labelOf("kommune", v));
+  if (ko.length) parts.push("i " + joinOr(ko));
   const groups = {};
   for (const d of DIMS){
-    if (["kjonn", "aldersband", "fylke"].includes(d.key) || !state[d.key].size) continue;
+    if (["kjonn", "aldersband", "fylke", "kommune"].includes(d.key) || !state[d.key].size) continue;
     if (d.binary){ (groups[d.binary] ??= []).push(d.title); continue; }
     const labs = Object.keys(d.values).filter(v => state[d.key].has(v)).map(v => d.values[v].toLowerCase());
     parts.push(d.phrase ? d.phrase.replace("{}", joinOr(labs)) : `(${d.title.toLowerCase()}: ${joinOr(labs)})`);
   }
-  for (const [g, ts] of Object.entries(groups)) parts.push(CFG.binary_groups[g].phrase.replace("{}", joinOr(ts)));
+  for (const [g, ts] of Object.entries(groups)){
+    const bg = CFG.binary_groups[g];
+    parts.push(bg.phrase.replace("{}", joinOr(bg.lower ? ts.map(t => t.toLowerCase()) : ts)));
+  }
   return Object.values(state).some(s => s.size) ? parts.join(" ") : "Alle voksne i Norge";
 }
 
@@ -605,6 +673,8 @@ async function refresh(){
     if (tab === "fordelinger") await renderDists(fp, my);
     if (tab === "personas") await renderPersonas(fp, my);
     if (tab === "arketyper") await renderArchetypes(fp, my);
+    if (tab === "kart") await renderMap(fp, my);
+    if (tab === "okonomi") await renderEconomy(fp, my);
   } catch(e){
     $("err").textContent = "Fikk ikke kontakt med panelet. Sjekk at serveren kjører (make serve) og last siden på nytt.";
     $("err").hidden = false;
@@ -669,10 +739,10 @@ function renderStory(size, pl, pr, fp){
 async function renderDists(fp, my){
   const host = $("dists");
   if (!Object.keys(baseDist).length){
-    const rows = await Promise.all(DIMS.map(d => get("/population/breakdown", {by: [d.key]})));
+    const rows = await Promise.all(DIMS.map(d => d.hidden ? [] : get("/population/breakdown", {by: [d.key]})));
     DIMS.forEach((d, i) => baseDist[d.key] = Object.fromEntries(rows[i].map(r => [String(r[d.key]), r.andel])));
   }
-  const rows = await Promise.all(DIMS.map(d => get("/population/breakdown", {...fp, by: [d.key]})));
+  const rows = await Promise.all(DIMS.map(d => d.hidden ? [] : get("/population/breakdown", {...fp, by: [d.key]})));
   if (my !== seq) return;
   host.innerHTML = "";
   const tierWraps = {};
@@ -687,6 +757,7 @@ async function renderDists(fp, my){
     const grid = wrap.querySelector(".dists");
     const binaries = {};
     for (const d of sec.dims){
+      if (d.hidden) continue;
       const seg = Object.fromEntries(rows[DIMS.indexOf(d)].map(r => [String(r[d.key]), r.andel]));
       if (d.binary){ (binaries[d.binary] ??= []).push([d.title, seg.ja || 0, baseDist[d.key].ja || 0]); continue; }
       grid.appendChild(distPanel(d.title, Object.entries(d.values).map(([v, lab]) => [lab, seg[v] || 0, baseDist[d.key][v] || 0])));
@@ -965,18 +1036,309 @@ function drawMap(vk){
   svg.querySelectorAll(".q").forEach(q => q.onclick = () => toggle("verdikart", q.dataset.k, !state.verdikart.has(q.dataset.k)));
 }
 
+/* ---------- Økonomi ---------- */
+const kr = v => v == null ? "–" : fmt.format(Math.round(v / 100) * 100) + " kr";
+const krK = v => v == null ? "–" : (v >= 1e6 ? (v / 1e6).toFixed(2).replace(".", ",") + " mill." : fmt.format(Math.round(v / 1000)) + " k") + " kr";
+async function renderEconomy(fp, my){
+  let e;
+  try { e = await get("/population/economy", fp); }
+  catch(err){ $("ecoHead").innerHTML = `<p class="note">Husholdningslaget er ikke bygget ennå (make fetch && make build).</p>`; return; }
+  if (my !== seq) return;
+  const i = e.inntekt;
+  const buy = Object.fromEntries(e.kjop.map(r => [r.key, r]));
+  const fri = e.forbruk.find(r => r.key === "forbruk_fritid");
+  const tile = (label, v, sub) => `<div><small>${label}</small><b>${v}</b><br><span>${sub}</span></div>`;
+  $("ecoHead").innerHTML =
+    tile("Husholdningsinntekt etter skatt, median", krK(i.median_segment), `Landet: ${krK(i.median_befolkning)}`) +
+    tile("Fritid, sport og kultur per år", krK(fri?.segment), `Landet: ${krK(fri?.befolkning)}`) +
+    (buy.kjop_nybil ? tile("Kjøper ny bil neste 12 mnd", pct(buy.kjop_nybil.segment), `Landet: ${pct(buy.kjop_nybil.befolkning)}`) : "") +
+    (buy.har_elbil ? tile("Har elbil", pct(buy.har_elbil.segment), `Landet: ${pct(buy.har_elbil.befolkning)}`) : "");
+  const s = $("ecoSpend"), b = $("ecoBuy"); s.innerHTML = ""; b.innerHTML = "";
+  const rows = e.forbruk.filter(r => r.key !== "forbruk_totalt");
+  const maxV = Math.max(...rows.map(r => r.segment || 0), 1);
+  const tipOf = (r, f) => `<strong>${r.title}</strong><br>Gruppen: ${f(r.segment)}<br>Hele befolkningen: ${f(r.befolkning)}`;
+  for (const r of [e.forbruk.find(r => r.key === "forbruk_totalt"), ...rows].filter(Boolean))
+    s.appendChild(itemRow(r.title, "", kr(r.segment), r.lift, r.key === "forbruk_totalt" ? 1 : (r.segment || 0) / maxV, tipOf(r, kr)));
+  for (const r of e.kjop) b.appendChild(itemRow(r.title, "", pct(r.segment || 0), r.lift, r.segment || 0, tipOf(r, v => pct(v || 0))));
+  $("ecoNote").textContent = `Tallene gjelder husholdningen personene bor i, i snitt over personene i gruppen. ${e.note} ` +
+    `Forbruket er forventet årlig utgift gitt husholdningstype, inntekt, sentralitet og alder – ikke faktiske kjøp. ` +
+    (e.agenter < 400 ? `Bygger på ${fmt.format(e.agenter)} syntetiske personer – ${e.presisjon} presisjon.` : "");
+}
+
+/* ---------- Kart ---------- */
+// Fargene følger dataviz-paletten for mørk flate: sekvensiell blå, oransje for målgruppen,
+// divergerende blå–grå–oransje for lift, og åtte faste kategorifarger (resten = «Andre»).
+const SEQ_BLUE = ["#184f95", "#1c5cab", "#2a78d6", "#5598e7", "#86b6ef", "#b7d3f6", "#cde2fb"];
+const SEQ_ORANGE = ["#5a2410", "#8a3517", "#b4461d", "#d95926", "#ec835a", "#f3a582", "#f8c9b2"];
+const DIV = ["#1c5cab", "#3987e5", "#86b6ef", "#383835", "#ec835a", "#d95926", "#a8441c"];
+const CAT = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"];
+const OTHER = "#5d5c57";
+const NUMS = {inntekt_kr: ["Husholdningsinntekt etter skatt", krK], forbruk_totalt: ["Forbruk i alt", krK],
+  forbruk_fritid: ["Fritid, sport og kultur", krK], forbruk_reiser: ["Reiser", krK], forbruk_restaurant: ["Restaurant og kafé", krK],
+  forbruk_fritidsutstyr: ["Varig fritidsutstyr", krK], forbruk_elektronikk: ["TV, PC og mobil", krK], forbruk_bilkjop: ["Kjøp av kjøretøy", krK],
+  p_nybil: ["Sannsynlighet for å kjøpe ny bil", pct], p_elbil: ["Sannsynlighet for å ha elbil", pct]};
+const MAP = {map: null, ready: null, grid: null, km2: {}, mode: "segment", dim: null, cat: null, num: "inntekt_kr",
+             geo: null, byK: {}, hover: null, popup: null, catColor: {}};
+
+function loadMapLib(){
+  if (window.maplibregl) return Promise.resolve();
+  return new Promise((ok, fail) => {
+    const css = document.createElement("link"); css.rel = "stylesheet";
+    css.href = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"; document.head.appendChild(css);
+    const js = document.createElement("script"); js.src = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
+    js.onload = ok; js.onerror = () => fail(new Error("Fikk ikke lastet kartbiblioteket")); document.head.appendChild(js);
+  });
+}
+
+function binsOf(values, n){
+  const v = values.filter(x => x != null && isFinite(x)).sort((a, b) => a - b);
+  return Array.from({length: n - 1}, (_, i) => v[Math.floor((i + 1) / n * (v.length - 1))]);
+}
+const binIdx = (x, cuts) => { let i = 0; while (i < cuts.length && x > cuts[i]) i++; return i; };
+
+function initMap(){
+  if (MAP.ready) return MAP.ready;
+  MAP.ready = (async () => {
+    await loadMapLib();
+    const [kom, fy, grid] = await Promise.all([get("/geo/kommuner.geojson"), get("/geo/fylker.geojson"), get("/geo/grid")]);
+    for (const f of kom.features) MAP.km2[f.properties.kommune] = f.properties.km2;
+    MAP.grid = grid;
+    MAP.gridFC = {type: "FeatureCollection", features: grid.ruter.map(r => ({type: "Feature",
+      geometry: {type: "Point", coordinates: [r[0], r[1]]}, properties: {k: grid.kommuner[r[3]], b: r[2], w: 0}}))};
+    // Bakgrunnskart: OpenFreeMap (mørk stil, ingen nøkkel). Faller tilbake til en tom flate uten nett.
+    let style = {version: 8, sources: {}, layers: [{id: "background", type: "background", paint: {"background-color": "#101618"}}]};
+    try {
+      const ctl = new AbortController(); setTimeout(() => ctl.abort(), 6000);
+      const r = await fetch("https://tiles.openfreemap.org/styles/dark", {signal: ctl.signal});
+      if (r.ok) style = await r.json();
+    } catch(e){}
+    for (const l of style.layers) if (l.id === "background") l.paint = {"background-color": "#101618"};
+    const map = new maplibregl.Map({container: "map", attributionControl: false, minZoom: 3, maxZoom: 13,
+      bounds: [[4.2, 57.8], [31.5, 71.3]], fitBoundsOptions: {padding: 20}, maxBounds: [[-12, 54], [48, 74]], style});
+    MAP.map = map;
+    map.addControl(new maplibregl.NavigationControl({showCompass: false}), "top-right");
+    map.addControl(new maplibregl.AttributionControl({compact: true,
+      customAttribution: "Grenser: Kartverket (CC BY 4.0) · Rutenett: SSB · Bakgrunn: OpenFreeMap"}), "bottom-right");
+    await new Promise(r => map.loaded() ? r() : map.once("load", r));
+    const baseLayers = map.getStyle().layers.map(l => l.id).filter(id => id !== "background");
+    // Egne lag over veier og arealer, men under stedsnavn.
+    const ls = map.getStyle().layers, lastShape = ls.map(l => l.type !== "symbol").lastIndexOf(true);
+    const before = ls[lastShape + 1]?.id;
+    const addMine = l => map.addLayer(l, before);
+    map.addSource("kom", {type: "geojson", data: kom, promoteId: "kommune"});
+    map.addSource("fy", {type: "geojson", data: fy});
+    map.addSource("grid", {type: "geojson", data: MAP.gridFC});
+    addMine({id: "k-fill", type: "fill", source: "kom", paint: {
+      "fill-color": ["coalesce", ["feature-state", "c"], "#232c2f"],
+      "fill-opacity": ["interpolate", ["linear"], ["zoom"], 5.5, ["coalesce", ["feature-state", "o"], 0.85], 8, 0.18, 10, 0.06]}});
+    addMine({id: "heat", type: "heatmap", source: "grid", minzoom: 5, paint: {
+      "heatmap-weight": ["get", "w"],
+      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 5, 0.6, 8, 1, 10, 1],
+      "heatmap-radius": ["interpolate", ["exponential", 2], ["zoom"], 5, 4, 8, 12, 10, 26],
+      "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0, 6.5, 0.85, 9.5, 0.75, 10.5, 0],
+      "heatmap-color": heatRamp(SEQ_ORANGE)}});
+    // Tett innzoomet: hver 1 km-rute som en prikk (ærligere enn et utsmurt varmekart).
+    addMine({id: "cells", type: "circle", source: "grid", minzoom: 9.5, filter: [">", ["get", "w"], 0.004], paint: {
+      "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 9.5, 10, 13, 113],
+      "circle-color": cellRamp(SEQ_ORANGE), "circle-blur": 0.15,
+      "circle-opacity": ["interpolate", ["linear"], ["zoom"], 9.5, 0, 10.5, 0.8]}});
+    addMine({id: "k-line", type: "line", source: "kom", paint: {"line-color": "#3c4b4f", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.2, 9, 0.9]}});
+    addMine({id: "f-line", type: "line", source: "fy", paint: {"line-color": "#71807f", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.6, 9, 1.6]}});
+    addMine({id: "k-sel", type: "line", source: "kom", paint: {"line-color": "#E8EEEC",
+      "line-width": ["case", ["boolean", ["feature-state", "sel"], false], 2.2, ["boolean", ["feature-state", "hover"], false], 1.4, 0]}});
+    const host = $("map");
+    map.on("mousemove", "k-fill", e => {
+      const f = e.features[0]; if (!f) return;
+      if (MAP.hover && MAP.hover !== f.id) map.setFeatureState({source: "kom", id: MAP.hover}, {hover: false});
+      MAP.hover = f.id; map.setFeatureState({source: "kom", id: f.id}, {hover: true});
+      map.getCanvas().style.cursor = "pointer";
+      if (MAP.popup?.isOpen()) delete host.dataset.tip; else host.dataset.tip = hoverText(f.id);
+    });
+    map.on("mouseleave", "k-fill", () => {
+      if (MAP.hover) map.setFeatureState({source: "kom", id: MAP.hover}, {hover: false});
+      MAP.hover = null; map.getCanvas().style.cursor = ""; delete host.dataset.tip;
+    });
+    map.on("click", "k-fill", e => { const f = e.features[0]; if (f){ delete host.dataset.tip; $("tip").style.opacity = 0; openKommune(f.id, e.lngLat); } });
+    $("mapBase").onchange = ev => { const v = ev.target.checked ? "visible" : "none";
+      for (const id of baseLayers) map.setLayoutProperty(id, "visibility", v); };
+  })();
+  return MAP.ready;
+}
+
+function cellRamp(stops){
+  return ["interpolate", ["linear"], ["sqrt", ["get", "w"]], 0, stops[0], 0.25, stops[2], 0.5, stops[4], 0.8, stops[5], 1, stops[6]];
+}
+function heatRamp(stops){
+  return ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(0,0,0,0)", 0.08, stops[0] + "00",
+          0.2, stops[1], 0.4, stops[3], 0.65, stops[4], 0.85, stops[5], 1, stops[6]];
+}
+
+function mapControls(){
+  const dimSel = $("mapDim"), numSel = $("mapNum");
+  if (!dimSel.options.length){
+    const cats = DIMS.filter(d => !d.binary && !d.hidden && !["fylke", "aldersband"].includes(d.key));
+    dimSel.innerHTML = cats.map(d => `<option value="${d.key}">${d.title}</option>`).join("");
+    MAP.dim = cats.find(d => d.key === "arketype")?.key || "utdanning";
+    dimSel.value = MAP.dim;
+    dimSel.onchange = () => { MAP.dim = dimSel.value; MAP.cat = null; renderMap(filters(), seq); };
+    numSel.innerHTML = Object.entries(NUMS).map(([k, [t]]) => `<option value="${k}">${t}</option>`).join("");
+    numSel.onchange = () => { MAP.num = numSel.value; renderMap(filters(), seq); };
+    document.querySelectorAll("#mapModes button").forEach(b => b.onclick = () => {
+      MAP.mode = b.dataset.mode;
+      document.querySelectorAll("#mapModes button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+      renderMap(filters(), seq);
+    });
+  }
+  dimSel.hidden = MAP.mode !== "fordeling";
+  numSel.hidden = MAP.mode !== "snitt";
+}
+
+async function renderMap(fp, my){
+  mapControls();
+  try { await initMap(); }
+  catch(e){ $("mapNote").textContent = "Kartet kunne ikke lastes: " + e.message + ". Kjør `python -m synthpanel.geo.fetch` og sjekk nettforbindelsen."; return; }
+  const params = {...fp};
+  if (MAP.mode === "fordeling") params.fordeling = MAP.dim;
+  if (MAP.mode === "snitt") params.snitt = MAP.num;
+  const g = await get("/population/geo", params);
+  if (my !== seq) return;
+  MAP.geo = g; MAP.byK = Object.fromEntries(g.kommuner.map(r => [r.kode, r]));
+  if (MAP.mode === "fordeling"){
+    const order = Object.entries(g.kategorier_land).sort((a, b) => b[1] - a[1]).map(([c]) => c);
+    const vals = Object.keys(BYKEY[MAP.dim].values).filter(v => v in g.kategorier_land);
+    // Faste farger etter rekkefølgen i hierarkiet – ikke etter rang – så fargen følger kategorien.
+    const big = new Set(order.slice(0, vals.length > 8 ? 7 : 8));
+    MAP.catColor = {}; let i = 0;
+    for (const v of vals) MAP.catColor[v] = big.has(v) ? CAT[i++] : OTHER;
+    if (MAP.cat && !(MAP.cat in g.kategorier_land)) MAP.cat = null;
+  }
+  paintMap();
+  // Valgt kommune i filteret: tydelig kant
+  for (const r of g.kommuner) MAP.map.setFeatureState({source: "kom", id: r.kode}, {sel: !!state.kommune?.has(r.kode)});
+}
+
+function paintMap(){
+  const g = MAP.geo, map = MAP.map, mode = MAP.mode;
+  const rows = g.kommuner;
+  let colorOf, legend = "", heatOf, heatStops = SEQ_ORANGE;
+  const filtered = Object.keys(filters()).length > 0;
+  if (mode === "befolkning"){
+    const dens = Object.fromEntries(rows.map(r => [r.kode, r.voksne / (MAP.km2[r.kode] || 1)]));
+    const cuts = [2, 5, 10, 25, 50, 150, 500];
+    colorOf = r => SEQ_BLUE[Math.min(binIdx(dens[r.kode], cuts), 6)];
+    heatOf = (b) => b; heatStops = SEQ_BLUE;
+    legend = `<h6>Voksne per km²</h6>${rampHtml(SEQ_BLUE)}<div class="ends"><span>under 2</span><span>over 500</span></div>
+      <p style="margin:6px 0 0">Varmekartet viser alle bosatte på 1 km-ruter (SSB 2026).</p>`;
+  } else if (mode === "segment"){
+    if (!filtered){
+      const cuts = [2, 5, 10, 25, 50, 150, 500];
+      colorOf = r => SEQ_ORANGE[Math.min(binIdx(r.voksne / (MAP.km2[r.kode] || 1), cuts), 6)];
+      legend = `<h6>Alle voksne – per km²</h6>${rampHtml(SEQ_ORANGE)}<div class="ends"><span>under 2</span><span>over 500</span></div>
+        <p style="margin:6px 0 0">Velg en målgruppe til venstre, så viser kartet hvor den er over- og underrepresentert (lift) og hvor de bor.</p>`;
+    } else {
+      const cuts = [0.67, 0.8, 0.93, 1.07, 1.25, 1.5];
+      colorOf = r => DIV[binIdx(r.lift ?? 1, cuts)];
+      legend = `<h6>Målgruppen mot landssnittet (lift)</h6>${rampHtml(DIV)}<div class="ends"><span>0,67× eller lavere</span><span>1</span><span>1,5× eller mer</span></div>
+        <p style="margin:6px 0 0">Varmekartet: hvor de ${fmt.format(g.personer)} i målgruppen bor.</p>`;
+    }
+    heatOf = (b, r) => b * (filtered ? r.andel_glattet : 1);
+  } else if (mode === "fordeling"){
+    const d = BYKEY[MAP.dim];
+    if (MAP.cat){
+      const L = g.kategorier_land[MAP.cat] || 1e-9;
+      const cuts = [0.67, 0.8, 0.93, 1.07, 1.25, 1.5];
+      colorOf = r => DIV[binIdx((r.kategorier?.[MAP.cat] ?? 0) / L, cuts)];
+      heatOf = (b, r) => b * r.andel_glattet * (r.kategorier?.[MAP.cat] ?? 0);
+    } else {
+      colorOf = r => r.topp ? MAP.catColor[r.topp.kode] || OTHER : "#2a3438";
+      heatOf = (b, r) => b * r.andel_glattet;
+    }
+    const items = Object.keys(d.values).filter(v => v in g.kategorier_land).map(v =>
+      `<button data-cat="${esc(v)}" aria-pressed="${MAP.cat === v}"><i style="--c:${MAP.catColor[v]}"></i>${esc(d.values[v])}<span class="v">${pct(g.kategorier_land[v])}</span></button>`).join("");
+    legend = `<h6>${esc(d.title)}${MAP.cat ? ": " + esc(d.values[MAP.cat]) : " – mest overrepresentert"}</h6>` +
+      (MAP.cat ? `${rampHtml(DIV)}<div class="ends"><span>under snittet</span><span>over snittet</span></div>` : "") +
+      `<div class="cats">${items}</div><p style="margin:6px 0 0;color:var(--ink-3)">${MAP.cat ? "Klikk igjen for å se alle." : "Klikk en kategori for å se den alene."} Andel i ${filtered ? "målgruppen" : "landet"} til høyre.</p>`;
+  } else {
+    const [title, f] = NUMS[MAP.num];
+    const cuts = binsOf(rows.map(r => r.snitt), 7);
+    colorOf = r => r.snitt == null ? "#2a3438" : SEQ_BLUE[binIdx(r.snitt, cuts)];
+    heatOf = (b, r) => b * (filtered ? r.andel_glattet : 1);
+    legend = `<h6>${title}${filtered ? " i målgruppen" : ""}</h6>${rampHtml(SEQ_BLUE)}<div class="ends"><span>${f(Math.min(...rows.map(r => r.snitt ?? Infinity)))}</span><span>${f(Math.max(...rows.map(r => r.snitt ?? -Infinity)))}</span></div>
+      <p style="margin:6px 0 0">Snitt per kommune (sju like store grupper). Landet: ${f(g.snitt_land)}.</p>`;
+  }
+  for (const r of rows){
+    const thin = r.agenter_alle < 30;
+    map.setFeatureState({source: "kom", id: r.kode}, {c: colorOf(r), o: thin ? 0.55 : 0.85});
+  }
+  // Varmekart: befolkningen per rute × kommunens (glattede) andel.
+  const ws = MAP.gridFC.features.map(f => { const r = MAP.byK[f.properties.k]; return r ? heatOf(f.properties.b, r) : 0; });
+  const top = [...ws].sort((a, b) => a - b)[Math.floor(ws.length * 0.995)] || 1;
+  MAP.gridFC.features.forEach((f, i) => f.properties.w = Math.min(1, ws[i] / top));
+  map.getSource("grid").setData(MAP.gridFC);
+  map.setPaintProperty("heat", "heatmap-color", heatRamp(heatStops));
+  map.setPaintProperty("cells", "circle-color", cellRamp(heatStops));
+  $("mapLegend").innerHTML = legend;
+  $("mapLegend").querySelectorAll("[data-cat]").forEach(b => b.onclick = () => {
+    MAP.cat = MAP.cat === b.dataset.cat ? null : b.dataset.cat; paintMap(); });
+  $("mapNote").textContent = "Fargene er per kommune; zoom inn for varmekartet. Små kommuner har få syntetiske personer, så andelene der " +
+    `trekkes mot fylkets (som om fylket bidro med ${g.glatting_agenter} personer), og kommuner med under 30 agenter vises svakere. ` +
+    "Innen en kommune fordeles målgruppen etter hvor folk bor – panelet vet ikke hvem som bor i hvilken rute. Klikk en kommune for detaljer.";
+}
+
+function rampHtml(stops){ return `<div class="ramp" style="background:linear-gradient(90deg,${stops.join(",")})"></div>`; }
+
+function hoverText(k){
+  const r = MAP.byK[k]; if (!r) return "";
+  let line = `<strong>${esc(r.navn)}</strong><br>${fmt.format(Math.round(r.voksne))} voksne`;
+  if (MAP.mode === "segment" && Object.keys(filters()).length) line += `<br>Målgruppen: ${pct(r.andel_glattet)} · ${lift(r.lift)}`;
+  if (MAP.mode === "fordeling"){
+    const d = BYKEY[MAP.dim];
+    if (MAP.cat) line += `<br>${esc(d.values[MAP.cat])}: ${pct(r.kategorier?.[MAP.cat] ?? 0)} (landet ${pct(MAP.geo.kategorier_land[MAP.cat])})`;
+    else if (r.topp) line += `<br>Mest overrepresentert: ${esc(d.values[r.topp.kode] ?? r.topp.kode)} ${lift(r.topp.lift)}`;
+  }
+  if (MAP.mode === "snitt") line += `<br>${NUMS[MAP.num][0]}: ${NUMS[MAP.num][1](r.snitt)}`;
+  if (MAP.mode === "befolkning") line += `<br>${fmt.format(Math.round(r.voksne / (MAP.km2[r.kode] || 1)))} voksne per km²`;
+  return line;
+}
+
+function openKommune(k, at){
+  const r = MAP.byK[k]; if (!r) return;
+  const filtered = Object.keys(filters()).length > 0;
+  const rowsHtml = [["Voksne", fmt.format(Math.round(r.voksne))], ["Areal", fmt.format(MAP.km2[k] || 0) + " km²"]];
+  if (filtered) rowsHtml.push(["I målgruppen", fmt.format(Math.round(r.personer))], ["Andel (glattet)", pct(r.andel_glattet)], ["Lift", lift(r.lift)]);
+  rowsHtml.push(["Syntetiske personer", fmt.format(r.agenter_alle)]);
+  if (filtered) rowsHtml.push(["… i målgruppen", fmt.format(r.agenter)]);
+  if (r.snitt != null && MAP.mode === "snitt") rowsHtml.push([NUMS[MAP.num][0], NUMS[MAP.num][1](r.snitt)]);
+  let cats = "";
+  if (MAP.mode === "fordeling" && r.kategorier){
+    const d = BYKEY[MAP.dim];
+    const top = Object.entries(r.kategorier).map(([c, v]) => [c, v, v / (MAP.geo.kategorier_land[c] || 1)]).sort((a, b) => b[2] - a[2]).slice(0, 4);
+    cats = `<div class="k" style="margin:4px 0">${esc(d.title)} – mest overrepresentert</div><table>${top.map(([c, v, l]) =>
+      `<tr><td>${esc(d.values[c] ?? c)}</td><td>${pct(v)} · ${lift(l)}</td></tr>`).join("")}</table>`;
+  }
+  const on = state.kommune?.has(k);
+  const html = `<div class="kpop"><h4>${esc(r.navn)}</h4><div class="k">Kommune ${k} · presisjon ${esc(r.presisjon.split(" –")[0])}</div>
+    <table>${rowsHtml.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("")}</table>${cats}
+    <button class="btn" id="kpopBtn">${on ? "Fjern kommunen fra målgruppen" : "Avgrens målgruppen til " + esc(r.navn)}</button></div>`;
+  MAP.popup?.remove();
+  MAP.popup = new maplibregl.Popup({maxWidth: "320px"}).setLngLat(at).setHTML(html).addTo(MAP.map);
+  $("kpopBtn").onclick = () => { MAP.popup.remove(); toggle("kommune", k, !on); };
+}
+
 /* ---------- Faner, nivå, verktøytips ---------- */
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
   document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
-  for (const t of ["personas", "arketyper", "steder", "kjennetegn", "fordelinger"]) $("tab-" + t).hidden = t !== tab;
+  for (const t of ["personas", "kart", "arketyper", "okonomi", "steder", "kjennetegn", "fordelinger"]) $("tab-" + t).hidden = t !== tab;
+  if (tab === "kart") renderMap(filters(), seq);
+  if (tab === "okonomi") renderEconomy(filters(), seq);
   if (tab === "arketyper") renderArchetypes(filters(), seq);
   if (tab === "fordelinger") renderDists(filters(), seq);
   if (tab === "personas") renderPersonas(filters(), seq);
 });
-document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+document.querySelectorAll("#tab-steder .seg button").forEach(b => b.onclick = () => {
   level = b.dataset.level;
-  document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  document.querySelectorAll("#tab-steder .seg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   refresh();
 });
 const tip = $("tip");

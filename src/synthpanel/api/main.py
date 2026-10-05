@@ -14,7 +14,8 @@ from typing import Annotated
 import duckdb
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, create_model
 
@@ -28,6 +29,8 @@ app = FastAPI(
         "L0: befolkningsramme kalibrert mot SSB. Alle tall er vektede estimater."
     ),
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=2000)
 
 # Dimensjoner som kan filtreres og grupperes på (hviteliste – brukes i SQL).
 DIMENSIONS = {
@@ -67,6 +70,14 @@ DIMENSIONS.update({c: f"Medie/netthandel: {lab} (ja/nei)" for c, lab in _MEDIA.i
 from synthpanel.leisure.layer import COLUMNS as _LEISURE  # noqa: E402
 DIMENSIONS.update({c: f"Trening/friluftsliv siste 12 mnd: {lab} (ja/nei)" for c, lab in _LEISURE.items()})
 DIMENSIONS["treningsfrekvens"] = "Hvor ofte de trener: ukentlig, av_og_til (månedlig), sjelden"
+from synthpanel.household import economy as _eco  # noqa: E402
+DIMENSIONS.update({
+    "inntekt_gruppe": "Husholdningens inntekt etter skatt (kr): u300, 300-500, 500-750, 750-1000, 1000-1500, o1500 (tusen kr)",
+    "fritidsforbruk": "Husholdningens forbruk på fritid, sport og kultur: lav/middels/høy (tredeler blant husholdningene)",
+    "reiseforbruk": "Husholdningens forbruk på reiser: lav/middels/høy (tredeler blant husholdningene)",
+    "forbruksniva": "Husholdningens samlede forbruk: lav/middels/høy (tredeler blant husholdningene)",
+    **{c: f"Kjøp: {lab} (ja/nei)" for c, lab in _eco.PURCHASE_COLS.items()},
+})
 DIMENSIONS.update({
     "arketype": "Arketype (Jungs tolv, fra Schwartz-verdiene) – se /archetypes",
     "verdikart": "Felt i verdikartet: tradisjonell/moderne × materialist/idealist",
@@ -225,7 +236,7 @@ def profile(f: Annotated[ProfileParams, Query()]):
         for d in sec["dims"]:
             key = d["key"]
             geo_filtered = bool({"fylke", "kommune", "sentralitet"} & set(filtered))
-            if key in filtered or key not in cols or (geo_filtered and key in ("fylke", "sentralitet")):
+            if key in filtered or key not in cols or key == "kommune" or (geo_filtered and key in ("fylke", "sentralitet")):
                 continue
             rows = con.execute(
                 f"""SELECT CAST({key} AS VARCHAR), COALESCE(SUM(vekt) FILTER (WHERE {cond}), 0), SUM(vekt)
@@ -418,6 +429,190 @@ def population_archetypes(f: Annotated[Filters, Query()]):
         "samfunnsroller": shares("samfunnsrolle", cfg["samfunnsroller"]),
         "resiliens": shares("resiliens", cfg["resiliens"]),
     }
+
+
+# ---------------------------------------------------------------------------
+# Husholdningens økonomi og kart
+# ---------------------------------------------------------------------------
+@app.get("/population/economy")
+def population_economy(f: Annotated[Filters, Query()]):
+    """Husholdningens økonomi for utvalget mot hele befolkningen: inntekt etter skatt,
+    forventet årlig forbruk per gruppe (kr, prisjustert) og kjøpsrater.
+    Alle tall gjelder husholdningen personene bor i, og er snitt over personer."""
+    cond, params, _ = _cond(f)
+    con = _con()
+    cols = set(con.execute("SELECT * FROM agents LIMIT 0").df().columns)
+    if "inntekt_kr" not in cols:
+        raise HTTPException(404, "Husholdningslaget er ikke bygget – kjør `make fetch` og `make build`.")
+    n = con.execute(f"SELECT COUNT(*) FROM agents WHERE {cond}", params).fetchone()[0]
+
+    def avg(expr: str) -> tuple[float | None, float | None]:
+        seg, pop = con.execute(
+            f"SELECT SUM(({expr}) * vekt) FILTER (WHERE {cond}) / SUM(vekt) FILTER (WHERE {cond}), "
+            f"SUM(({expr}) * vekt) / SUM(vekt) FROM agents", params + params).fetchone()
+        return seg, pop
+
+    def item(key: str, title: str, expr: str, unit: str) -> dict:
+        seg, pop = avg(expr)
+        return {"key": key, "title": title, "enhet": unit, "segment": seg, "befolkning": pop,
+                "lift": (seg / pop) if seg is not None and pop else None}
+
+    med_seg, med_pop = con.execute(
+        f"SELECT quantile_cont(inntekt_kr, 0.5) FILTER (WHERE {cond}), quantile_cont(inntekt_kr, 0.5) FROM agents",
+        params).fetchone()
+    spend = [item(c, lab, c, "kr") for c, (_, lab, _) in _eco.SPEND.items() if c in cols]
+    kjop = [item(c, lab, f"CASE WHEN {c} = 'ja' THEN 1.0 ELSE 0.0 END", "andel")
+            for c, lab in _eco.PURCHASE_COLS.items() if c in cols]
+    return {"agenter": n, "presisjon": _precision_note(n),
+            "inntekt": {**item("inntekt_kr", "Inntekt etter skatt (snitt)", "inntekt_kr", "kr"),
+                        "median_segment": med_seg, "median_befolkning": med_pop},
+            "forbruk": spend, "kjop": kjop,
+            "note": "Forventet årlig utgift for husholdningen (Forbruksundersøkelsen 2022, prisjustert med KPI). "
+                    "Kjøpsrater fra førstegangsregistreringer og bilparken per kommune."}
+
+
+GEO_NUMERIC = {"inntekt_kr": "Husholdningsinntekt etter skatt (kr)", **{c: v[1] for c, v in _eco.SPEND.items()},
+               "p_nybil": "Sannsynlighet for å kjøpe ny bil", "p_elbil": "Sannsynlighet for å ha elbil"}
+SHRINK = 50   # «pseudo-agenter» fra fylket i glattingen (empirisk Bayes)
+
+
+class GeoParams(Filters):
+    fordeling: str | None = Field(None, description="Kategorisk dimensjon å vise fordelingen av per kommune (f.eks. arketype)")
+    snitt: str | None = Field(None, description=f"Tallvariabel å vise snitt av per kommune: {sorted(GEO_NUMERIC)}")
+
+
+@app.get("/population/geo")
+def population_geo(f: Annotated[GeoParams, Query()]):
+    """Segmentet per kommune, til kartet. For hver kommune: voksne, personer i segmentet,
+    andel, lift og antall agenter – både rått og *glattet* (andelen trekkes mot fylkets
+    med vekt som 50 agenter, så små kommuner ikke gir tilfeldige utslag).
+    Med `fordeling` kommer andelen per kategori i segmentet og den mest overrepresenterte
+    kategorien; med `snitt` kommer segmentets snitt av en tallvariabel."""
+    if f.fordeling and f.fordeling not in DIMENSIONS:
+        raise HTTPException(422, f"Ukjent dimensjon: {f.fordeling}")
+    if f.snitt and f.snitt not in GEO_NUMERIC:
+        raise HTTPException(422, f"`snitt` må være en av {sorted(GEO_NUMERIC)}")
+    cond, params, _ = _cond(f)
+    con = _con()
+    rows = con.execute(f"""
+        SELECT kommune, ANY_VALUE(kommune_navn), ANY_VALUE(fylke), SUM(vekt), COUNT(*),
+               COALESCE(SUM(vekt) FILTER (WHERE {cond}), 0), COUNT(*) FILTER (WHERE {cond})
+        FROM agents GROUP BY 1""", params + params).fetchall()
+    df = {r[0]: {"kode": r[0], "navn": r[1].split(" - ")[0], "fylke": r[2], "voksne": r[3], "agenter_alle": r[4],
+                 "personer": r[5], "agenter": r[6]} for r in rows}
+    tot = sum(r["voksne"] for r in df.values())
+    seg_tot = sum(r["personer"] for r in df.values())
+    base = seg_tot / tot if tot else 0.0
+    fy = {}
+    for r in df.values():
+        g = fy.setdefault(r["fylke"], [0.0, 0.0])
+        g[0] += r["personer"]; g[1] += r["voksne"]
+
+    def smooth(p: float, n: int, parent: float) -> float:
+        return (n * p + SHRINK * parent) / (n + SHRINK)
+
+    for r in df.values():
+        raw = r["personer"] / r["voksne"] if r["voksne"] else 0.0
+        parent = fy[r["fylke"]][0] / fy[r["fylke"]][1]
+        r["andel"] = raw
+        r["andel_glattet"] = smooth(raw, r["agenter_alle"], parent)
+        r["lift"] = r["andel_glattet"] / base if base else None
+        r["presisjon"] = _precision_note(r["agenter"])
+    out = {"andel_land": base, "personer": round(seg_tot), "glatting_agenter": SHRINK}
+
+    if f.fordeling:
+        col = f.fordeling
+        cats = con.execute(f"""
+            SELECT kommune, CAST({col} AS VARCHAR), SUM(vekt) FILTER (WHERE {cond}), COUNT(*) FILTER (WHERE {cond})
+            FROM agents GROUP BY 1, 2""", params + params).fetchall()
+        land = {}
+        fyc = {}
+        for k, c, w, _n in cats:
+            if c is None or w is None:
+                continue
+            land[c] = land.get(c, 0.0) + w
+            fyc.setdefault(df[k]["fylke"], {}).setdefault(c, 0.0)
+            fyc[df[k]["fylke"]][c] += w
+        lt = sum(land.values()) or 1.0
+        out["kategorier_land"] = {c: v / lt for c, v in land.items()}
+        per = {}
+        for k, c, w, _n in cats:
+            if c is not None and w:
+                per.setdefault(k, {})[c] = w
+        for k, r in df.items():
+            seg = per.get(k, {})
+            s = sum(seg.values())
+            parent = fyc.get(r["fylke"], {})
+            ps = sum(parent.values()) or 1.0
+            shares = {c: smooth((seg.get(c, 0.0) / s) if s else 0.0, r["agenter"], parent.get(c, 0.0) / ps)
+                      for c in land}
+            r["kategorier"] = {c: round(v, 4) for c, v in shares.items()}
+            # «Mest overrepresentert» blant kategorier med minst 2 % i landet (små kategorier gir støy).
+            cand = [c for c in land if out["kategorier_land"][c] >= 0.02] or list(land)
+            top = max(cand, key=lambda c: shares[c] / out["kategorier_land"][c]) if cand else None
+            r["topp"] = {"kode": top, "andel": shares[top], "lift": shares[top] / out["kategorier_land"][top]} if top else None
+
+    if f.snitt:
+        col = f.snitt
+        vals = con.execute(f"""
+            SELECT kommune, SUM({col} * vekt) FILTER (WHERE {cond}), SUM(vekt) FILTER (WHERE {cond} AND {col} IS NOT NULL)
+            FROM agents GROUP BY 1""", params + params).fetchall()
+        land_s = sum(v[1] or 0 for v in vals) / (sum(v[2] or 0 for v in vals) or 1)
+        fys = {}
+        for k, s, w in vals:
+            g = fys.setdefault(df[k]["fylke"], [0.0, 0.0])
+            g[0] += s or 0; g[1] += w or 0
+        for k, s, w in vals:
+            r = df[k]
+            parent = fys[r["fylke"]][0] / fys[r["fylke"]][1] if fys[r["fylke"]][1] else land_s
+            raw = (s / w) if w else parent
+            r["snitt"] = smooth(raw, r["agenter"], parent)
+        out["snitt_land"] = land_s
+        out["snitt_tittel"] = GEO_NUMERIC[col]
+
+    out["kommuner"] = list(df.values())
+    return out
+
+
+@lru_cache
+def _geo_file(name: str) -> bytes:
+    path = config.RAW_DIR / name
+    if not path.exists():
+        raise HTTPException(404, "Geodata mangler – kjør `python -m synthpanel.geo.fetch`.")
+    return path.read_bytes()
+
+
+@app.get("/geo/kommuner.geojson")
+def geo_kommuner():
+    """Kommunegrenser 2024 (Kartverket via robhop/fylker-og-kommuner, CC BY 4.0), forenklet."""
+    return Response(_geo_file("geo_kommuner.geojson"), media_type="application/geo+json")
+
+
+@app.get("/geo/fylker.geojson")
+def geo_fylker():
+    return Response(_geo_file("geo_fylker.geojson"), media_type="application/geo+json")
+
+
+@lru_cache
+def _grid_payload() -> dict:
+    import pandas as pd
+    path = config.RAW_DIR / "geo_grid_1km.parquet"
+    if not path.exists():
+        raise HTTPException(404, "Rutenettet mangler – kjør `python -m synthpanel.geo.fetch`.")
+    g = pd.read_parquet(path)
+    g = g[g["bosatte"] > 0]
+    codes = sorted(g["kommune"].unique())
+    ix = {c: i for i, c in enumerate(codes)}
+    return {"kilde": "SSB, befolkning på rutenett 1 km, 1.1.2026", "kommuner": codes,
+            "kolonner": ["lon", "lat", "bosatte", "kommune_idx", "snittalder"],
+            "ruter": [[r.lon, r.lat, int(r.bosatte), ix[r.kommune], None if r.snittalder != r.snittalder else r.snittalder]
+                      for r in g.itertuples(index=False)]}
+
+
+@app.get("/geo/grid")
+def geo_grid():
+    """Befolkning på 1 km-rutenett (SSB), med kommunen hver rute ligger i."""
+    return _grid_payload()
 
 
 @app.get("/health")

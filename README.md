@@ -13,6 +13,9 @@ segmentene er.
 > European Social Survey (testet mot respondenter modellen ikke har sett),
 > partivalg ved stortingsvalget 2025 (kalibrert mot valgresultatet per fylke)
 > og bruk av sosiale medier, strømming og netthandel.
+> Husholdningslaget gir inntekt i kroner (kalibrert per kommune), forventet
+> forbruk (fritid, reiser, bil, TV/PC m.m.) og bilkjøp/elbil, og fanen «Kart»
+> viser målgruppen, arketyper og økonomi per kommune med varmekart på 1 km-ruter.
 > Egenskapene er ordnet i et verdihierarki – hygiene-, motivasjons- og
 > verdifaktorer – og fanen «Ti på gata» viser de ti største grupperingene i
 > ethvert utvalg som personer med navn og AI-generert portrett.

@@ -184,7 +184,9 @@ def build() -> dict:
     margins2 = {k: v for k, v in margins.items() if k != geo_key} | lav | {geo_key: margins[geo_key]}
     res = rake(a, margins2, base_weights=base, bounds=(0.1, 10.0), max_iter=500, tol=5e-3)  # kildene er uenige på 0,1–0,5 %; se docs/architecture.md
     a["vekt"] = res.weights
-    a["inntektsdesil"] = enrich.draw_income(a.assign(_w=a["vekt"]), rng)
+    from synthpanel.household import economy
+    targets = economy.kommune_decile_targets() if economy.available() else None
+    a["inntektsdesil"] = enrich.draw_income(a.assign(_w=a["vekt"]), rng, targets)
     a["eierstatus"], a["boligtype"], housing_alpha = enrich.draw_housing(a, rng)
 
 
@@ -221,6 +223,9 @@ def build() -> dict:
     from synthpanel.leisure import layer as leisure
     a = leisure.attach(a, rng)
     leisure_cols = [c for c in [*leisure.COLUMNS, leisure.FREQ_COL] if c in a.columns]
+    # Husholdningslaget: inntekt i kroner, forbruk og kjøpsrater
+    a, household_report = economy.attach(a, rng)
+    household_cols = [c for c in economy.COLUMNS if c in a.columns]
     # L3 – arketypelaget (tolkninger av lagene over; ingen tilfeldige trekk)
     from synthpanel.archetypes import lens
     arch_cols = []
@@ -230,7 +235,7 @@ def build() -> dict:
     a.insert(0, "agent_id", [f"NO-{i:06d}" for i in range(len(a))])
     a = a[["agent_id", "kommune", "kommune_navn", "fylke", "fylke_navn", "sentralitet",
            "kjonn", "alder", "aldersband", "utdanning", "bakgrunn", "innvkat",
-           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "eierstatus", "boligtype", *value_cols, *pol_cols, *media_cols, *leisure_cols, *arch_cols, "vekt"]]
+           "arbeidsstatus", "husholdning", "lavinntekt", "inntektsdesil", "eierstatus", "boligtype", *value_cols, *pol_cols, *media_cols, *leisure_cols, *household_cols, *arch_cols, "vekt"]]
 
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     a.to_parquet(config.PROCESSED_DIR / "agents.parquet", index=False)
@@ -248,6 +253,7 @@ def build() -> dict:
         "weight_min": float(a["vekt"].min()),
         "weight_max": float(a["vekt"].max()),
         "housing_income_damping": housing_alpha,
+        "husholdning": household_report,
     }
     with open(config.PROCESSED_DIR / "build_report.json", "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)

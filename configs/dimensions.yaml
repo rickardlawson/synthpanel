@@ -32,6 +32,12 @@ tiers:
             title: Fylke
             values: from_data
             label_column: fylke_navn
+          - key: kommune
+            title: Kommune
+            values: from_data
+            label_column: kommune_navn
+            hidden: true          # for mange til avkrysning – velges i søket eller ved klikk i kartet
+            phrase: "i {}"
           - key: sentralitet
             title: Sentralitet
             values: {"01": "1 – mest sentral", "02": "2", "03": "3", "04": "4", "05": "5", "06": "6 – minst sentral"}
@@ -69,6 +75,11 @@ tiers:
             title: Husholdningsinntekt (desil)
             values: {"1": "1 – lavest", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "10": "10 – høyest"}
             phrase: "med husholdningsinntekt i desil {}"
+          - key: inntekt_gruppe
+            title: Husholdningsinntekt etter skatt
+            values: {u300: "Under 300 000 kr", "300-500": "300–500 000 kr", "500-750": "500–750 000 kr",
+                     "750-1000": "750 000–1 mill. kr", "1000-1500": "1–1,5 mill. kr", o1500: "Over 1,5 mill. kr"}
+            phrase: "med husholdningsinntekt {} etter skatt"
           - key: lavinntekt
             title: Lavinntekt (EU-60)
             values: {ja: Lavinntekt, nei: Ikke lavinntekt}
@@ -136,6 +147,18 @@ tiers:
           - {key: netthandel_takeaway, title: Take-away, binary: netthandel}
           - {key: netthandel_kosmetikk, title: Kosmetikk og velvære, binary: netthandel}
 
+      - id: husholdningsforbruk
+        title: Husholdningens forbruk og kjøp
+        estimate: true
+        note: Forbruksundersøkelsen 2022 (prisjustert), førstegangsregistreringer og bilparken per kommune.
+        dims:
+          - {key: forbruksniva, title: Samlet forbruk, values: {lav: Lavt, middels: Middels, høy: Høyt}, phrase: "med {} forbruk i husholdningen"}
+          - {key: fritidsforbruk, title: Forbruk på fritid og kultur, values: {lav: Lavt, middels: Middels, høy: Høyt}, phrase: "med {} fritidsforbruk"}
+          - {key: reiseforbruk, title: Forbruk på reiser, values: {lav: Lavt, middels: Middels, høy: Høyt}, phrase: "med {} reiseforbruk"}
+          - {key: kjop_nybil, title: Kjøper ny bil, binary: kjop}
+          - {key: kjop_nybil_el, title: Kjøper ny elbil, binary: kjop}
+          - {key: har_elbil, title: Har elbil, binary: kjop}
+
       - id: politikk
         title: Politisk engasjement
         estimate: true
@@ -198,3 +221,4 @@ binary_groups:
   netthandel: {title: Har handlet på nett siste år, phrase: "som har kjøpt {} på nett"}
   trening: {title: Trener med, phrase: "som driver med {}"}
   friluft: {title: Friluftsliv siste år, phrase: "med {} siste år"}
+  kjop: {title: Bil i husholdningen (neste 12 mnd), phrase: "i husholdninger som {}", lower: true}

@@ -10,7 +10,7 @@ verdifulle er ofte **gapet** mellom de to.
 
 | Lag | Innhold | Kilder | Status |
 |---|---|---|---|
-| **L0 Befolkningsramme** | Kjønn, alder, kommune, fylke, sentralitet, utdanning, landbakgrunn, innvandringskategori, hovedstatus (arbeid/studier/pensjon/trygd), husholdningstype, lavinntekt, inntektsdesil. Neste: yrke/næring, bolig | SSB | ✅ v0.2 |
+| **L0 Befolkningsramme** | Kjønn, alder, kommune, fylke, sentralitet, utdanning, landbakgrunn, innvandringskategori, hovedstatus (arbeid/studier/pensjon/trygd), husholdningstype, lavinntekt, inntektsdesil (per kommune) og inntekt i kr, bolig, forbruk og bilkjøp. Neste: yrke/næring | SSB | ✅ v0.4 |
 | **L1 Fasitbibliotek – atferd** | Valgresultater, mediebruk, forbruk, dagligvare, kjente meningsmålinger. Lagres som *fordelinger med metadata* (kilde, år, spørsmål, populasjon, usikkerhet) | SSB, Valgundersøkelsen, Medietilsynet, publiserte målinger | ⏳ |
 | **L2 Verdilag** | Schwartz-verdier (fire hovedretninger), tillit, risikovilje, klimabekymring, religiøsitet, politisk ståsted og interesse. Neste: frivillighet, mediebruk, Medborgerpanelet | ESS runde 9–11 (ev. Norsk Monitor på lisens) | ✅ v0.3 |
 | **L3 Arketyper / personas** | Arketypelaget: verdikart, Jungs arketypehjul, samfunnsroller og kriseresiliens (se under). «Ti på gata»: de største grupperingene i et utvalg som representative personer | Avledet | ✅ v1 |
@@ -67,6 +67,62 @@ aktivitetsfaktor (gaussisk kopula, rho 0,45) – den som løper, styrketrener
 oftere også, og treningsfrekvensen følger samme faktor. Testet: andeler per
 kjønn × alder treffer SSB, jakt er klart mer utbredt i distriktene, og de som
 trener ukentlig driver med flere aktiviteter. Svakhet: rho er satt skjønnsmessig.
+
+## Husholdningslaget (inntekt i kroner, forbruk, kjøp)
+
+Alle tall gjelder *husholdningen agenten bor i* (`src/synthpanel/household/economy.py`).
+Agentene er voksne personer, så når panelet sammenlignes med SSBs
+husholdningstabeller, vektes hver agent med vekt / voksne per husholdning
+(personer i panelet per type delt på husholdninger i 06944).
+
+1. **Inntekt per kommune.** Desilen trekkes som før fra fylke × husholdningstype
+   (12563), men vippes per kommune (IPF over type × desil) så andelen
+   husholdninger i hver nasjonale desil treffer kommunetallene i **12558**.
+2. **Inntekt i kroner.** Jevnt mellom de nasjonale desilgrensene (12558);
+   desil 1 fra 100 000 kr, desil 10 fra en Pareto-hale (alfa 3) – begge skjønn.
+3. **Forbruk** (Forbruksundersøkelsen 2022): forventet årlig utgift per gruppe =
+   snitt for husholdningstype × inntektskvartil (14157), justert for sentralitet
+   (14161) og alder for aleneboende (14227), dempet 0,6, skalert til landssnittet
+   (14100) og prisjustert med KPI til 2025 (14709). Felles lognormal
+   «forbruksfaktor» per husholdning (sd 0,25) + eget avvik per gruppe.
+   Grupper: i alt, mat, klær, innbo, kjøp av kjøretøy, TV/PC/mobil, fritid,
+   fritidsutstyr, trening/kurs, kultur, reiser, restaurant. Tredeler (lav/middels/høy
+   blant husholdningene) for samlet forbruk, fritid og reiser kan filtreres på.
+4. **Kjøpsrater:** sannsynlighet for å kjøpe ny bil neste 12 mnd = nye
+   personbiler i kommunen (12906) / husholdninger (06944), fordelt etter hvor mye
+   type × inntektskvartil bruker på kjøretøy (14157); elbilandelen blant nye følger
+   kommunen. «Har elbil» fra privateide elbiler per husholdning (13370).
+
+**Kontroll (ikke brukt i trekkingen):** median husholdningsinntekt per kommune
+mot 06944, 104 kommuner med minst 100 agenter. Snittavvik 3,4 % (korrelasjon
+0,87) – mot 8,0 % (korrelasjon 0,46) uten kommunevippingen. Forventede
+nybilkjøp: 170 000 mot 179 000 registrerte.
+
+**Svakheter:** forbruket er fra 2022 (strømpris-året) og er *forventet* utgift,
+ikke faktiske kjøp; utdanning påvirker fortsatt inntekt bare via lavinntekt;
+leasing- og firmabiler er med i nybilraten; hyttetilgang mangler (SSB publiserer
+ikke eierskap til fritidsbolig etter eierens bosted i åpne tabeller).
+**Kjøpsintensjon** («vurderer å kjøpe …») finnes ikke i åpne data og krever et
+anker (omnibus, Kantar TGI eller Norsk Monitor) – kjøpsratene over er målt atferd.
+
+## Kartet (`/population/geo`, fanen «Kart»)
+
+- **Grenser:** kommuner og fylker 2024 (Kartverket, forenklet av
+  robhop/fylker-og-kommuner, CC BY 4.0). **Rutenett:** SSBs befolkning på 1 km-ruter
+  1.1.2026 (OGC API på kart.ssb.no), hver rute koblet til kommunen den ligger i
+  (rutenettet treffer 07459 per kommune med median 0,2 % avvik).
+  `python -m synthpanel.geo.fetch` / `make geo`.
+- **Per kommune:** segmentets personer, andel og lift. Andelene glattes mot
+  fylket som om fylket bidro med 50 agenter (empirisk Bayes) – ellers gir små
+  kommuner med 10–20 agenter tilfeldige utslag.
+- **Visninger:** målgruppen (lift, divergerende), fordeling av en dimensjon
+  (mest overrepresenterte kategori, eller én kategori alene), snitt av inntekt,
+  forbruk eller kjøpssannsynlighet, og befolkningstetthet.
+- **Varmekart / ruter:** innen kommunen fordeles segmentet etter hvor folk bor
+  (rute-befolkning × kommunens glattede andel). Panelet vet ikke hvem som bor i
+  hvilken rute – mønsteret innen en kommune er befolkningens, ikke segmentets.
+- Klikk på en kommune avgrenser målgruppen til den (dimensjonen `kommune`, skjult i
+  avkrysningen men søkbar). Bakgrunnskart fra OpenFreeMap (ingen nøkkel).
 
 ## Fasit: merketest mot BI Norsk kundebarometer (L1)
 
@@ -172,6 +228,8 @@ vektene kalibreres (raking) mot 15 marginaler fra SSB i to pass.
 | Verdier og holdninger | kjønn, alder, utdanning, inntekt, region, innvandring, status, bosted, aleneboende | ESS 9–11 | – (statistisk matching, se under) |
 | Stemmerett, valgdeltakelse, parti 2025 | ESS-donorens partivalg, kjønn, alder, utdanning, innvandring, status | Valgdirektoratet, 11666, 10440, 13818, 13446, 13554 | frammøte og partier per fylke; parti × kjønn × alder |
 | Medier og netthandel | kjønn, alder | 14511, 14512, 07001 | – |
+| Inntektsdesil per kommune | (vipping av desilen over) | 12558 | kommunens desilfordeling (husholdninger) |
+| Inntekt i kr, forbruk, kjøpsrater | desil, husholdningstype, sentralitet, alder, kommune | 12558, 14157, 14161, 14227, 14100, 14709, 12906, 13370 | landssnitt per forbruksgruppe (14100) |
 
 Resultat v0.2: 50 751 agenter, effektiv utvalgsstørrelse ≈ 45 500. Kommunetall
 er eksakte. Alle marginaler ligger under 0,2 % feilplassert befolkning, unntatt
@@ -316,11 +374,13 @@ Opoint-data avtales eksplisitt før kobling.
 4. ✅ Politisk lag (valg 2025) og medielag (kjønn × alder)
 4c. ✅ Verdihierarki (hygiene / motivasjon / verdi) og «Ti på gata»-personas med navn og AI-portretter
 4b. ✅ Nytt grensesnitt: målgruppebygger med kategorier (styrt av `configs/dimensions.yaml`), resultatpanel med steder (størst/tettest + lift) og kjennetegn (`/population/places`, `/population/profile`)
-5. Forbruksprofil (SSB forbruksundersøkelse), fritid; Mediebarometer-mikrodata (Sikt)
+5. ✅ Forbruksprofil (SSB forbruksundersøkelse), fritid · Mediebarometer-mikrodata (Sikt) gjenstår
 6. Utvidet testsett: Norsk medborgerpanel og publiserte målinger
 7. ✅ L3 arketypelag: verdikart, arketypehjul, samfunnsroller, kriseresiliens
 8. ✅ L4 v0: still personaene spørsmål, test budskap på tvers av galleriet, samtale med én persona
 8b. ✅ Fritidslag (SSB idrett og friluftsliv) og første fasit: merketest mot BI Norsk kundebarometer
+8d. ✅ Husholdningslag (inntekt i kr per kommune, forbruk, bilkjøp/elbil) og klikkbart kart med varmekart (1 km)
+8e. Kjøpsintensjon: avklar ankerkilde (omnibus/TGI/Norsk Monitor); hytte; bydeler (06944 har dem)
 8c. L4: kalibrere budskapstesten mot kjente utfall (pilotcasene)
 9. L4 første scenario ende-til-ende (Tine), målt mot testsettet
 10. L5 kobling til Signalist

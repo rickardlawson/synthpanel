@@ -1,4 +1,4 @@
-.PHONY: install fasit names portraits fetch fetch-ess build data test validate serve up down rebuild-data
+.PHONY: install geo fasit names portraits fetch fetch-ess build data test validate serve up down rebuild-data
 
 install:
 	pip install -e ".[dev]"
@@ -8,7 +8,12 @@ fetch:          ## Hent rådata fra SSB og Valgdirektoratet
 	python -m synthpanel.politics.fetch
 	python -m synthpanel.media.layer
 	python -m synthpanel.leisure.layer
+	python -m synthpanel.household.fetch
+	python -m synthpanel.geo.fetch
 	python -m synthpanel.personas.names
+
+geo:            ## Hent kommunegrenser og befolkning på 1 km-rutenett til kartet
+	python -m synthpanel.geo.fetch
 
 names:          ## Hent navnestatistikk (SSB) til persona-galleriet
 	python -m synthpanel.personas.names
@@ -44,5 +49,5 @@ down:
 	docker compose down
 
 rebuild-data:   ## Docker: hent ferske SSB-tall og bygg på nytt
-	docker compose exec synthpanel sh -c "python -m synthpanel.frame.fetch && python -m synthpanel.frame.build"
+	docker compose exec synthpanel sh -c "python -m synthpanel.frame.fetch && python -m synthpanel.household.fetch && python -m synthpanel.frame.build"
 	docker compose restart synthpanel

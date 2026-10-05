@@ -541,8 +541,9 @@ def _income_probs(a2: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([reg[["fylke", "inntektstype", "desil", "p"]], fill[["fylke", "inntektstype", "desil", "p"]]])
 
 
-def draw_income(a: pd.DataFrame, rng: np.random.Generator) -> pd.Series:
-    """Trekk inntektsdesil fra fordelingen for husholdningstype og fylke (12563).
+def draw_income(a: pd.DataFrame, rng: np.random.Generator, kommune_targets: pd.DataFrame | None = None) -> pd.Series:
+    """Trekk inntektsdesil fra fordelingen for husholdningstype og fylke (12563),
+    vippet per kommune mot 12558 når `kommune_targets` er gitt.
 
     Innen hver celle får personer med lavinntekt den nederste delen av fordelingen
     (like stor som cellens lavinntektsandel), og de andre resten. Slik henger desil
@@ -551,10 +552,34 @@ def draw_income(a: pd.DataFrame, rng: np.random.Generator) -> pd.Series:
     probs = _income_probs(a2).set_index(["fylke", "inntektstype"]).sort_index()
     out = pd.Series(0, index=a.index, dtype=int)
     w = a2["_w"] if "_w" in a2 else pd.Series(1.0, index=a.index)
-    for key, idx in a2.groupby(["fylke", "inntektstype"]).groups.items():
-        dist = probs.loc[key].sort_values("desil")
-        p = np.nan_to_num(dist["p"].to_numpy(dtype=float)); p = p / p.sum()
-        deciles = dist["desil"].astype(int).to_numpy()
+
+    def dist_of(fylke, typ):
+        dist = probs.loc[(fylke, typ)].sort_values("desil")
+        p = np.nan_to_num(dist["p"].to_numpy(dtype=float))
+        return dist["desil"].astype(int).to_numpy(), p / p.sum()
+
+    # Fordeling per (kommune, husholdningstype): fylkets fordeling, vippet per kommune
+    # så kommunens desilfordeling (husholdninger, 12558) treffes. Se household/economy.py.
+    cells = {}
+    targets = kommune_targets
+    if targets is not None:
+        from synthpanel.household.economy import household_weight
+        hw = household_weight(a2.assign(vekt=w))
+    for kom, g in a2.groupby("kommune"):
+        types = g["inntektstype"].unique()
+        fylke = g["fylke"].iloc[0]
+        dists = {t: dist_of(fylke, t) for t in types}
+        if targets is not None and kom in targets.index:
+            from synthpanel.household.economy import tilt
+            dec = dists[types[0]][0]
+            tw = hw.loc[g.index].groupby(g["inntektstype"]).sum().to_dict()
+            q = tilt({t: d[1] for t, d in dists.items()}, tw, targets.loc[kom, list(dec)].to_numpy(dtype=float))
+            dists = {t: (dists[t][0], q[t]) for t in types}
+        for t in types:
+            cells[(kom, t)] = dists[t]
+
+    for key, idx in a2.groupby(["kommune", "inntektstype"]).groups.items():
+        deciles, p = cells[key]
         cdf = np.concatenate([[0.0], np.cumsum(p)])
         low = (a2.loc[idx, "lavinntekt"] == "ja").to_numpy()
         L = float((w.loc[idx][low]).sum() / w.loc[idx].sum())
