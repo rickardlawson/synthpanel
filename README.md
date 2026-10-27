@@ -80,7 +80,7 @@ Oppdatere med ferske SSB-tall: `make rebuild-data` (Docker) eller `make data`.
 
 Merge til `main` → testene kjører (GitHub Actions) → grønt gir automatisk deploy
 til Fly.io (`fly.toml`, region Stockholm). Populasjonen bygges ved første oppstart
-og ligger på volumet `synthpanel_data`; maskinen sover når ingen bruker den.
+og ligger på volumet `synthpanel_data`; maskinen står alltid på (ca. 50–60 kr/mnd).
 
 Engangsoppsett:
 
