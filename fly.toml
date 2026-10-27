@@ -36,6 +36,7 @@ primary_region = "arn"
     path = "/health"
 
 [[vm]]
-  memory = "1gb"
+  # 1 GB/1 CPU ble for lite: byggingen med verdilaget sto i over 15 min
+  memory = "2gb"
   cpu_kind = "shared"
-  cpus = 1
+  cpus = 2
