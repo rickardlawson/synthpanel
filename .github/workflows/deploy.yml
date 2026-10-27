@@ -1,0 +1,24 @@
+name: Deploy til Fly.io
+
+on:
+  workflow_run:
+    workflows: [Tester]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency: deploy-fly
+
+jobs:
+  deploy:
+    # Deployer bare når testene på main gikk grønt (eller ved manuell kjøring)
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

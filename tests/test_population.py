@@ -208,10 +208,12 @@ def test_value_layer_beats_national_average_on_holdout():
 # --- Politikk og medier ---------------------------------------------------------
 
 def _pol_ready():
-    return (config.RAW_DIR / "valg_resultat_2025.parquet").exists()
+    # Politisk lag krever både valgdata og verdilaget (ESS-donorenes partivalg)
+    return ((config.RAW_DIR / "valg_resultat_2025.parquet").exists()
+            and (config.RAW_DIR / "ess_norway.parquet").exists())
 
 
-@pytest.mark.skipif(not _pol_ready(), reason="valgdata ikke hentet")
+@pytest.mark.skipif(not _pol_ready(), reason="valgdata eller ESS ikke hentet")
 def test_election_2025_national_and_oslo(agents):
     from synthpanel.politics import assign
     r = pd.read_parquet(config.RAW_DIR / "valg_resultat_2025.parquet")
@@ -228,7 +230,7 @@ def test_election_2025_national_and_oslo(agents):
                - float(ro["A"].iloc[0] / ro[assign.PARTIES].sum(axis=1).iloc[0])) < 0.02
 
 
-@pytest.mark.skipif(not _pol_ready(), reason="valgdata ikke hentet")
+@pytest.mark.skipif(not _pol_ready(), reason="valgdata eller ESS ikke hentet")
 def test_young_men_frp_matches_election_survey(agents):
     """13554 er brukt i kalibreringen – dette sikrer at den virker (unge menn: FrP 38 % i 2025)."""
     v = agents[(agents["stemte_2025"] == "ja") & (agents["kjonn"] == "mann") & agents["alder"].between(18, 34)]
@@ -236,7 +238,7 @@ def test_young_men_frp_matches_election_survey(agents):
     assert 0.33 < share < 0.43
 
 
-@pytest.mark.skipif(not _pol_ready(), reason="valgdata ikke hentet")
+@pytest.mark.skipif(not _pol_ready(), reason="valgdata eller ESS ikke hentet")
 def test_heldout_income_gradient_direction(agents):
     """Uavhengig (13698 ikke brukt): Høyre øker og SV faller med inntekt."""
     v = agents[agents["stemte_2025"] == "ja"]
