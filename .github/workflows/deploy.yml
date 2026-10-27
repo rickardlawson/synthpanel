@@ -19,6 +19,6 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
+      - run: flyctl deploy --remote-only --wait-timeout 20m   # første oppstart bygger populasjonen (~5–10 min)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
