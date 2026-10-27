@@ -15,7 +15,7 @@ verdifulle er ofte **gapet** mellom de to.
 | **L2 Verdilag** | Schwartz-verdier (fire hovedretninger), tillit, risikovilje, klimabekymring, religiøsitet, politisk ståsted og interesse. Neste: frivillighet, mediebruk, Medborgerpanelet | ESS runde 9–11 (ev. Norsk Monitor på lisens) | ✅ v0.3 |
 | **L3 Arketyper / personas** | Arketypelaget: verdikart, Jungs arketypehjul, samfunnsroller og kriseresiliens (se under). «Ti på gata»: de største grupperingene i et utvalg som representative personer | Avledet | ✅ v1 |
 | **L4 Scenariomotor** | Stimulus inn → reaksjon per segment ut, med usikkerhet, volumvekt og spredning over tid (first movers → etternølere) | LLM + kalibrering | Kontrakt i `POST /estimate` |
-| **L5 Mediekobling** | Fersk kontekst fra Signalist (Brands / People / Debates) | Signalist API | Senere – via avtale |
+| **L5 Mediekobling** | Fersk kontekst fra Signalist (Brands / People / Debates) | Signalist API (`/claims`) | v0: debatter (`POST /debates/react`), eksempeldata |
 
 ## Arketypelaget (L3) – fire linser
 
@@ -340,6 +340,40 @@ sammenheng med utdanning, bosted og verdier, og mellom tjenestene.
 - **Små fylker og kommuner** har få agenter i smale grupper – svarene merkes
   `presisjon: moderat/lav`.
 - Utdanning, status og inntekt er fra 2024/2025; befolkning fra 1.1.2026.
+
+## Debattkobling (L5 v0)
+
+Signalist henter ut debatter (`/claims`): en standpunktakse (−10 … +10), en
+aggregert score på åtte faste argumentdimensjoner, og artiklene bak med medietype,
+fylke og lesertall. `POST /debates/react` regner for hver agent
+(`src/synthpanel/debates/model.py`, parametere i `configs/debates.yaml`):
+
+1. **Eksponering** – sannsynlighet for å ha fått med seg saken. Hver artikkel når
+   10 % av nettstedets lesere (skjønn), lokale medier bare sitt fylke, nasjonale
+   alle. Artikler utenfor Signalists utvalg regnes som nasjonale med standard
+   rekkevidde. Politisk interesse (ESS) skalerer (høy ×1,4, lav ×0,7).
+2. **Dragning** (−1 … +1 langs aksen) – argumentene vektet med hvor mottakelig
+   agenten er for hver dimensjon: exp(0,5 × z), der z kommer fra verdilaget.
+
+| Signalist-dimensjon | Panelets mål |
+|---|---|
+| Fairness / equality, Health / harm | selvoverskridelse |
+| Order / security / authority | bevaring |
+| Freedom / autonomy | åpenhet for endring |
+| Institution / law / legitimacy | tillit |
+| Morality / decency | bevaring + selvoverskridelse |
+| Economy / cost | egen økonomi: eier i arbeidsfør alder, lavinntekt |
+| Evidence / effectiveness | utdanning |
+
+Svaret per gruppe: andel eksponert, snitt dragning og **indeks** (100 = befolkningen).
+Det sier *hvem debatten når og hvem argumentene treffer hardest*, ikke hva folk mener –
+mening krever et målt startpunkt per sak (prinsipp 1 og 2).
+
+**Svakheter:** alle parametere er skjønn; lesertall er per nettsted, ikke per sak;
+fortegnet på argumentscorene antas å følge debattens akse (bekreftes med Signalist);
+historikken i Signalist starter i oktober 2026, så det finnes ennå ikke saker med
+kjent utfall å kalibrere mot. Eksempeldataene (`configs/debates_samples.json`)
+inneholder kun ID-er og Signalists avledede score – ingen artikkeltekst (Opoint-lisens).
 
 ## Kobling til Signalist (senere)
 

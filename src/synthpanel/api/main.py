@@ -710,6 +710,69 @@ def estimate(req: EstimateRequest):
 
 
 # ---------------------------------------------------------------------------
+# L5 v0 – Debattkobling (Signalist /claims → hvem debatten når og trekker)
+# ---------------------------------------------------------------------------
+@lru_cache
+def _debate_samples() -> list[dict]:
+    path = config.CONFIG_DIR / "debates_samples.json"
+    return json.loads(path.read_text(encoding="utf-8"))["debatter"] if path.exists() else []
+
+
+@lru_cache
+def _agents_df():
+    return _con().execute("SELECT * FROM agents").df()
+
+
+class DebateReactRequest(BaseModel):
+    claim_id: str | None = Field(None, description="ID for en av eksempeldebattene (se /debates/samples)")
+    debate: dict | None = Field(None, description="En debatt i Signalist-format (/claims/{id} med summary, "
+                                                  "arguments_aggregate og sample_articles)")
+    by: list[str] = Field(["arketype"], description="Én eller to dimensjoner å gruppere på")
+
+
+@app.get("/debates/samples")
+def debate_samples():
+    """Eksempeldebatter fra Signalist (bank) – kun ID-er og Signalists avledede score."""
+    return [{"claim_id": d["claim_id"], "statement": d["statement"], "stance_axis": d["stance_axis"],
+             "overall_stance_label": (d.get("summary") or {}).get("overall_stance_label"),
+             "article_count": d.get("article_count")} for d in _debate_samples()]
+
+
+@app.post("/debates/react")
+def debate_react(req: DebateReactRequest):
+    """Hvem en Signalist-debatt trolig når (eksponering) og hvem argumentene trekker
+    hardest, og i hvilken retning langs debattens akse (dragning −1…+1, indeks 100 =
+    befolkningssnittet). **Simulering, ikke kalibrert:** sier ikke hva folk mener."""
+    from synthpanel.debates.model import Debate, react
+    raw = req.debate
+    if raw is None:
+        raw = next((d for d in _debate_samples() if d["claim_id"] == req.claim_id), None)
+        if raw is None:
+            raise HTTPException(404, "Ukjent claim_id – oppgi en debatt eller en ID fra /debates/samples.")
+    if not 1 <= len(req.by) <= 2 or any(b not in DIMENSIONS for b in req.by):
+        raise HTTPException(422, f"`by` må være én eller to av: {sorted(DIMENSIONS)}")
+    try:
+        debate = Debate.from_signalist(raw)
+    except (KeyError, TypeError, ValueError) as e:
+        raise HTTPException(422, f"Debatten mangler felt: {e}")
+    agents = _agents_df()
+    missing = [b for b in req.by if b not in agents.columns]
+    if missing:
+        raise HTTPException(404, f"Ikke bygget i denne populasjonen: {missing}")
+    rows = react(agents, debate, req.by)
+    rows["presisjon"] = rows["agenter"].map(_precision_note)
+    has_values = "score_fellesskap" in agents.columns
+    return {
+        "debatt": {"claim_id": debate.claim_id, "statement": debate.statement, "akse": debate.axis,
+                   "argumenter": debate.arguments, "artikler_i_perioden": debate.article_total},
+        "status": "simulering – ikke kalibrert mot målte meninger",
+        "verdilag": has_values,
+        "merknad": None if has_values else "Verdilaget (ESS) mangler – dragningen bygger bare på økonomi og utdanning.",
+        "grupper": json.loads(rows.to_json(orient="records", force_ascii=False)),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Frontend: befolkningsutforskeren på http://localhost:8090/
 # Montert sist, så API-rutene over har forrang.
 # ---------------------------------------------------------------------------
