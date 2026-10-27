@@ -2,13 +2,17 @@
 # Bygger populasjonen ved første oppstart (data ligger i et volum og overlever omstart).
 set -e
 if [ ! -f "$SYNTHPANEL_DATA_DIR/processed/agents.parquet" ]; then
-  echo "Ingen populasjon funnet – henter fra SSB og bygger (tar under ett minutt)..."
+  echo "Ingen populasjon funnet – henter fra SSB og bygger (tar noen minutter)..."
   python -m synthpanel.frame.fetch
   python -m synthpanel.politics.fetch
   python -m synthpanel.media.layer
   python -m synthpanel.leisure.layer
   python -m synthpanel.household.fetch
-  if [ -n "$ESS_USER_ID" ]; then python -m synthpanel.values.ess; else echo "ESS_USER_ID ikke satt – bygger uten verdilag"; fi
+  if [ -n "$ESS_USER_ID" ]; then
+    python -m synthpanel.values.ess || echo "ADVARSEL: klarte ikke hente ESS (sjekk ESS_USER_ID) – bygger uten verdilag"
+  else
+    echo "ESS_USER_ID ikke satt – bygger uten verdilag"
+  fi
   python -m synthpanel.frame.build
 fi
 # Husholdningslaget (inntekt i kr, forbruk, kjøp) kom etter første versjon: hent og bygg på nytt ved behov.
