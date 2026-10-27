@@ -85,9 +85,9 @@ og ligger på volumet `synthpanel_data`; maskinen sover når ingen bruker den.
 Engangsoppsett:
 
 ```bash
-fly volumes create synthpanel_data --region arn --size 1
-fly secrets set SYNTHPANEL_PASSWORD=... ESS_USER_ID=... ANTHROPIC_API_KEY=...
-fly tokens create deploy   # lim inn som GitHub-secret FLY_API_TOKEN
+fly volumes create synthpanel_data --region arn --size 1 -a synthpanel-uppercase
+fly secrets set -a synthpanel-uppercase SYNTHPANEL_PASSWORD=... ESS_USER_ID=... ANTHROPIC_API_KEY=...
+fly tokens create deploy -a synthpanel-uppercase   # lim inn som GitHub-secret FLY_API_TOKEN
 ```
 
 Legg også `ESS_USER_ID` som GitHub-secret, ellers testes ikke verdilaget i CI.

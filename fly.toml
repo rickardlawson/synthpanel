@@ -3,7 +3,7 @@
 # Hemmeligheter settes med `fly secrets set` – aldri her:
 #   SYNTHPANEL_PASSWORD (slår på innlogging), ESS_USER_ID, ANTHROPIC_API_KEY
 
-app = "synthpanel"           # endre hvis appen fikk et annet navn i Fly
+app = "synthpanel-uppercase"
 primary_region = "arn"
 
 [build]
