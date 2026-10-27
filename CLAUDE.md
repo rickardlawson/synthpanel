@@ -56,7 +56,7 @@ først, og si fra hvis testene ble hoppet over.
 
 ## Aldri i git
 
-- `data/` (bygges fra kildene), `.env`, API-nøkler (`ANTHROPIC_API_KEY`,
+- `data/` (bygges fra kildene; unntak: `configs/seed/` med statiske, åpne data som reserve når kilden er nede), `.env`, API-nøkler (`ANTHROPIC_API_KEY`,
   `ESS_USER_ID`, senere Signalist-nøkler).
 - Rådata eller tekst fra Signalist/Opoint og BI-tall utover det som allerede
   ligger i `configs/fasit/` – bruken er avtalebasert.
