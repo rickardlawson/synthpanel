@@ -728,6 +728,7 @@ class DebateReactRequest(BaseModel):
     debate: dict | None = Field(None, description="En debatt i Signalist-format (/claims/{id} med summary, "
                                                   "arguments_aggregate og sample_articles)")
     by: list[str] = Field(["arketype"], description="Én eller to dimensjoner å gruppere på")
+    filters: dict[str, list[str]] = Field({}, description="Målgruppe, samme nøkler som filtrene i resten av API-et")
 
 
 @app.get("/debates/samples")
@@ -735,15 +736,17 @@ def debate_samples():
     """Eksempeldebatter fra Signalist (bank) – kun ID-er og Signalists avledede score."""
     return [{"claim_id": d["claim_id"], "statement": d["statement"], "stance_axis": d["stance_axis"],
              "overall_stance_label": (d.get("summary") or {}).get("overall_stance_label"),
-             "article_count": d.get("article_count")} for d in _debate_samples()]
+             "article_count": d.get("article_count"),
+             "periode_artikler": (d.get("summary") or {}).get("article_amount")} for d in _debate_samples()]
 
 
 @app.post("/debates/react")
 def debate_react(req: DebateReactRequest):
     """Hvem en Signalist-debatt trolig når (eksponering) og hvem argumentene trekker
     hardest, og i hvilken retning langs debattens akse (dragning −1…+1, indeks 100 =
-    befolkningssnittet). **Simulering, ikke kalibrert:** sier ikke hva folk mener."""
-    from synthpanel.debates.model import Debate, react
+    befolkningssnittet). Kan avgrenses til en målgruppe med `filters`.
+    **Simulering, ikke kalibrert:** sier ikke hva folk mener."""
+    from synthpanel.debates.model import Debate, react, score, summary
     raw = req.debate
     if raw is None:
         raw = next((d for d in _debate_samples() if d["claim_id"] == req.claim_id), None)
@@ -751,23 +754,37 @@ def debate_react(req: DebateReactRequest):
             raise HTTPException(404, "Ukjent claim_id – oppgi en debatt eller en ID fra /debates/samples.")
     if not 1 <= len(req.by) <= 2 or any(b not in DIMENSIONS for b in req.by):
         raise HTTPException(422, f"`by` må være én eller to av: {sorted(DIMENSIONS)}")
+    if any(k not in DIMENSIONS for k in req.filters):
+        raise HTTPException(422, f"Ukjent filter. Gyldige: {sorted(DIMENSIONS)}")
     try:
         debate = Debate.from_signalist(raw)
     except (KeyError, TypeError, ValueError) as e:
         raise HTTPException(422, f"Debatten mangler felt: {e}")
     agents = _agents_df()
-    missing = [b for b in req.by if b not in agents.columns]
+    missing = [b for b in [*req.by, *req.filters] if b not in agents.columns]
     if missing:
         raise HTTPException(404, f"Ikke bygget i denne populasjonen: {missing}")
-    rows = react(agents, debate, req.by)
+    mask = None
+    for col, vals in req.filters.items():
+        if vals:
+            m = agents[col].astype(str).isin([str(v) for v in vals])
+            mask = m if mask is None else mask & m
+    cfg = config.load("debates")
+    sc = score(agents, debate, cfg)
+    rows = react(agents, debate, req.by, cfg, mask=mask, scores=sc)
     rows["presisjon"] = rows["agenter"].map(_precision_note)
+    tot = summary(agents, sc, mask)
+    tot["segment"]["presisjon"] = _precision_note(int(tot["segment"]["agenter"] or 0))
     has_values = "score_fellesskap" in agents.columns
     return {
         "debatt": {"claim_id": debate.claim_id, "statement": debate.statement, "akse": debate.axis,
-                   "argumenter": debate.arguments, "artikler_i_perioden": debate.article_total},
+                   "artikler_i_perioden": debate.article_total, "signalist_standpunkt": debate.stance_label,
+                   "argumenter": [{"dimensjon": k, **cfg["navn"].get(k, {"navn": k, "treffer": ""}), "score": v}
+                                  for k, v in debate.arguments.items()]},
         "status": "simulering – ikke kalibrert mot målte meninger",
         "verdilag": has_values,
         "merknad": None if has_values else "Verdilaget (ESS) mangler – dragningen bygger bare på økonomi og utdanning.",
+        **tot,
         "grupper": json.loads(rows.to_json(orient="records", force_ascii=False)),
     }
 

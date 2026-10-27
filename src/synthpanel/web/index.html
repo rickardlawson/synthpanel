@@ -321,6 +321,28 @@
   .eco-head b{font-size:1.25rem; font-weight:600; font-variant-numeric:tabular-nums}
   .eco-head span{color:var(--ink-3); font-size:.76rem}
   @media (prefers-reduced-motion:reduce){ .item .bar, .sec > button .chev{transition:none} }
+  /* Debatter */
+  .deb-pick{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; margin:0 0 18px}
+  .deb-pick button{text-align:left; background:var(--bg); border:1px solid var(--rule-2); border-radius:10px; padding:10px 12px;
+                   color:var(--ink-2); cursor:pointer; font-size:.86rem; line-height:1.35}
+  .deb-pick button b{display:block; color:var(--ink); font-weight:600; margin-bottom:4px}
+  .deb-pick button[aria-pressed="true"]{border-color:var(--apricot); box-shadow:0 0 0 1px var(--apricot) inset}
+  .deb-axis{margin:18px 0 26px}
+  .deb-axis .poles{display:grid; grid-template-columns:1fr 1fr; gap:24px; font-size:.8rem; color:var(--ink-3)}
+  .deb-axis .poles span:last-child{text-align:right}
+  .deb-axis .track{position:relative; height:10px; margin:8px 0 6px; border-radius:6px;
+                   background:linear-gradient(90deg, var(--fjord), var(--rule-2) 50%, var(--apricot))}
+  .deb-axis .mark{position:absolute; top:-5px; width:3px; height:20px; border-radius:2px; transform:translateX(-50%)}
+  .deb-axis .mark.pop{background:var(--ink-3)} .deb-axis .mark.seg{background:var(--ink)}
+  .deb-axis .mk{display:flex; gap:16px; font-size:.75rem; color:var(--ink-3)}
+  .deb-axis .mk i{display:inline-block; width:3px; height:11px; margin-right:6px; vertical-align:-1px; border-radius:2px}
+  .deb-head{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px}
+  .deb-head h3{margin:0}
+  .arg{display:grid; grid-template-columns:minmax(0,1fr) 120px; gap:12px; align-items:center; padding:7px 0; border-bottom:1px solid var(--rule)}
+  .arg .n{font-size:.88rem} .arg .n i{display:block; font-style:normal; color:var(--ink-3); font-size:.75rem}
+  .arg .dv{position:relative; height:8px; background:var(--rule); border-radius:4px}
+  .arg .dv::after{content:""; position:absolute; left:50%; top:-3px; width:1px; height:14px; background:var(--ink-3)}
+  .arg .dv span{position:absolute; top:0; height:8px; border-radius:4px}
 </style>
 </head>
 <body>
@@ -351,6 +373,7 @@
       <p class="story" id="story"></p>
 
       <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="false" data-tab="debatter">Debatter</button>
         <button role="tab" aria-selected="false" data-tab="personas">Ti på gata</button>
         <button role="tab" aria-selected="false" data-tab="kart">Kart</button>
         <button role="tab" aria-selected="false" data-tab="arketyper">Arketyper</button>
@@ -358,6 +381,25 @@
         <button role="tab" aria-selected="true" data-tab="steder">Steder</button>
         <button role="tab" aria-selected="false" data-tab="kjennetegn">Kjennetegn</button>
         <button role="tab" aria-selected="false" data-tab="fordelinger">Alle fordelinger</button>
+      </div>
+
+      <div id="tab-debatter" role="tabpanel" hidden>
+        <p class="gal-note">Debatter fra Signalist (eksempeldata om bank). Panelet viser hvem debatten trolig når, hvilken vei argumentene trekker, og hvem de treffer hardest. Det er en simulering av medietrykk – ikke en måling av hva folk mener. Velg en målgruppe til venstre for å se den mot hele befolkningen.</p>
+        <div class="deb-pick" id="debPick"></div>
+        <p class="story" id="debStory"></p>
+        <div class="deb-axis" id="debAxis"></div>
+        <div class="lists">
+          <div class="list">
+            <div class="deb-head"><h3><span>HVEM TREKKES HARDEST</span></h3>
+              <div class="seg" role="group" aria-label="Grupper etter" id="debBy">
+                <button data-by="arketype" aria-pressed="true">Arketype</button><button data-by="samfunnsrolle" aria-pressed="false">Rolle</button><button data-by="aldersband" aria-pressed="false">Alder</button><button data-by="fylke" aria-pressed="false">Fylke</button>
+              </div></div>
+            <h3><span>NÅDD (PERSONER)</span><span>MOT SNITT</span></h3>
+            <div id="debGroups"></div>
+          </div>
+          <div class="list"><h3><span>HVA ARGUMENTENE HANDLER OM</span><span>RETNING</span></h3><div id="debArgs"></div></div>
+        </div>
+        <p class="note" id="debNote"></p>
       </div>
 
       <div id="tab-personas" role="tabpanel" hidden>
@@ -672,6 +714,7 @@ async function refresh(){
     renderStory(size, pl, pr, fp);
     if (tab === "fordelinger") await renderDists(fp, my);
     if (tab === "personas") await renderPersonas(fp, my);
+    if (tab === "debatter") await renderDebates(fp, my);
     if (tab === "arketyper") await renderArchetypes(fp, my);
     if (tab === "kart") await renderMap(fp, my);
     if (tab === "okonomi") await renderEconomy(fp, my);
@@ -1325,11 +1368,82 @@ function openKommune(k, at){
   $("kpopBtn").onclick = () => { MAP.popup.remove(); toggle("kommune", k, !on); };
 }
 
+/* ---------- Debatter ---------- */
+let DEB = {list: null, sel: null, by: "arketype"};
+async function renderDebates(fp, my){
+  if (!DEB.list){
+    DEB.list = await get("/debates/samples");
+    DEB.sel = DEB.list[0]?.claim_id;
+  }
+  if (!DEB.list.length){ $("debPick").innerHTML = `<p class="note">Ingen debatter tilgjengelig.</p>`; return; }
+  $("debPick").innerHTML = DEB.list.map(d => `<button data-id="${esc(d.claim_id)}" aria-pressed="${d.claim_id === DEB.sel}">
+      <b>${esc(d.statement)}</b>${fmt.format(d.article_count || 0)} artikler i Signalist</button>`).join("");
+  $("debPick").querySelectorAll("button").forEach(b => b.onclick = () => { DEB.sel = b.dataset.id; renderDebates(filters(), seq); });
+  let r;
+  try {
+    const resp = await fetch("/debates/react", {method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({claim_id: DEB.sel, by: [DEB.by], filters: fp})});
+    if (!resp.ok){
+      const msg = (await resp.json()).detail || String(resp.status);
+      if (resp.status === 404 && /Ikke bygget/.test(msg) && DEB.by !== "aldersband"){
+        // Uten verdilaget finnes ikke arketyper/roller: vis alder og skjul de knappene
+        document.querySelectorAll('#debBy button[data-by="arketype"], #debBy button[data-by="samfunnsrolle"]').forEach(x => x.hidden = true);
+        DEB.by = "aldersband";
+        document.querySelectorAll("#debBy button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.by === DEB.by)));
+        return renderDebates(fp, my);
+      }
+      throw new Error(msg);
+    }
+    r = await resp.json();
+  } catch(e){ $("debStory").textContent = "Fikk ikke beregnet debatten: " + e.message; return; }
+  if (my !== seq) return;
+  const deb = r.debatt, seg = r.segment, pop = r.befolkning, hasSeg = Object.keys(fp).length > 0;
+  const dir = (pop.snitt_dragning || 0) < 0 ? deb.akse["-10"] : deb.akse["+10"];
+  const groups = r.grupper.filter(g => g.agenter >= 30 && g.indeks_dragning != null)
+                  .sort((a, b) => b.indeks_dragning - a.indeks_dragning);
+  const name = g => labelOf(DEB.by, String(g[DEB.by]));
+  const top = groups.slice(0, 3).map(g => `${esc(name(g))} (${Math.round(g.indeks_dragning)})`);
+  const who = hasSeg ? "i målgruppen" : "voksne";
+  const rel = seg.indeks_dragning == null ? "" : Math.abs(seg.indeks_dragning - 100) < 5 ? "omtrent like sterkt som snittet"
+            : seg.indeks_dragning > 100 ? `${Math.round(seg.indeks_dragning - 100)} % sterkere enn snittet` : `${Math.round(100 - seg.indeks_dragning)} % svakere enn snittet`;
+  $("debStory").innerHTML = `«${esc(deb.statement)}» har trolig nådd rundt <b>${fmt.format(Math.round(seg.eksponerte_personer / 100) * 100)} ${who}</b> (${pct(seg.andel_eksponert)})`
+    + (hasSeg ? `, av ${fmt.format(Math.round(pop.eksponerte_personer / 1000) * 1000)} i hele landet` : "") + `. `
+    + `Argumentene trekker mot <b>«${esc(dir)}»</b>` + (hasSeg ? ` – målgruppen ${rel}` : "") + `. `
+    + (top.length ? `Hardest treffes ${top.join(", ")}.` : "");
+  const x = v => (50 + 50 * Math.max(-1, Math.min(1, v || 0))).toFixed(1) + "%";
+  $("debAxis").innerHTML = `<div class="poles"><span>← ${esc(deb.akse["-10"])}</span><span>${esc(deb.akse["+10"])} →</span></div>
+    <div class="track"><span class="mark pop" style="left:${x(pop.snitt_dragning)}"></span>${hasSeg ? `<span class="mark seg" style="left:${x(seg.snitt_dragning)}"></span>` : ""}</div>
+    <div class="mk"><span><i style="background:var(--ink-3)"></i>Hele befolkningen</span>${hasSeg ? `<span><i style="background:var(--ink)"></i>Målgruppen</span>` : ""}<span>Midten = argumentene trekker ikke noen vei</span></div>`;
+  const el = $("debGroups"); el.innerHTML = "";
+  const maxI = Math.max(...groups.map(g => g.indeks_dragning), 100);
+  for (const g of groups) el.appendChild(itemRow(esc(name(g)), "", fmt.format(Math.round(g.eksponerte_personer / 10) * 10),
+    g.indeks_dragning / 100, g.indeks_dragning / maxI,
+    `<strong>${esc(name(g))}</strong><br>Har trolig sett saken: ${pct(g.andel_eksponert)} (${fmt.format(Math.round(g.eksponerte_personer))} personer)<br>Trekkes ${Math.round(g.indeks_dragning)} % av snittet<br>${fmt.format(g.agenter)} syntetiske personer · presisjon ${esc(g.presisjon.split(" –")[0])}`));
+  if (!groups.length) el.innerHTML = `<p class="note">For få syntetiske personer i målgruppen til å sammenligne grupper.</p>`;
+  const args = deb.argumenter.filter(a => Math.abs(a.score) >= 0.5).sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
+  $("debArgs").innerHTML = args.map(a => {
+    const w = Math.abs(a.score) * 5, left = a.score < 0 ? 50 - w : 50;
+    const toward = a.score < 0 ? deb.akse["-10"] : deb.akse["+10"];
+    return `<div class="arg" data-tip="<strong>${esc(a.navn)}</strong> (${a.score.toFixed(1).replace(".", ",")} av ±10)<br>Trekker mot: ${esc(toward)}<br>Treffer særlig ${esc(a.treffer)}">
+      <span class="n">${esc(a.navn)}<i>treffer ${esc(a.treffer)}</i></span>
+      <span class="dv"><span style="left:${left}%;width:${w}%;background:${a.score < 0 ? "var(--fjord)" : "var(--apricot)"}"></span></span></div>`;
+  }).join("") || `<p class="note">Ingen tydelige argumenter.</p>`;
+  $("debNote").textContent = `${r.status[0].toUpperCase() + r.status.slice(1)}. «Mot snitt» er hvor sterkt gruppen trekkes sammenlignet med befolkningen (1,00× = snittet). `
+    + `Eksponering bygger på lesertall for mediene som har skrevet om saken; dragningen på gruppens verdier, økonomi og utdanning. `
+    + `Bygger på ${fmt.format(seg.agenter)} syntetiske personer · presisjon ${seg.presisjon.split(" –")[0]}.` + (r.merknad ? " " + r.merknad : "");
+}
+document.querySelectorAll("#debBy button").forEach(b => b.onclick = () => {
+  DEB.by = b.dataset.by;
+  document.querySelectorAll("#debBy button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  renderDebates(filters(), seq);
+});
+
 /* ---------- Faner, nivå, verktøytips ---------- */
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
   document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
-  for (const t of ["personas", "kart", "arketyper", "okonomi", "steder", "kjennetegn", "fordelinger"]) $("tab-" + t).hidden = t !== tab;
+  for (const t of ["debatter", "personas", "kart", "arketyper", "okonomi", "steder", "kjennetegn", "fordelinger"]) $("tab-" + t).hidden = t !== tab;
+  if (tab === "debatter") renderDebates(filters(), seq);
   if (tab === "kart") renderMap(filters(), seq);
   if (tab === "okonomi") renderEconomy(filters(), seq);
   if (tab === "arketyper") renderArchetypes(filters(), seq);

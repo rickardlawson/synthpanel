@@ -145,24 +145,47 @@ def pull(agents: pd.DataFrame, debate: Debate, cfg: dict | None = None,
     return num / (10.0 * den)
 
 
-def react(agents: pd.DataFrame, debate: Debate, by: list[str], cfg: dict | None = None) -> pd.DataFrame:
-    """Eksponering og dragning per gruppe, vektet med befolkningen."""
+def score(agents: pd.DataFrame, debate: Debate, cfg: dict | None = None) -> pd.DataFrame:
+    """Eksponering og dragning per agent."""
     cfg = cfg or config.load("debates")
-    d = agents[by + ["vekt"]].copy()
-    d["eksp"] = exposure(agents, debate, cfg)
-    d["drag"] = pull(agents, debate, cfg)
-    d["we"] = d["vekt"] * d["eksp"]            # personer som trolig har sett saken
-    d["drag_w"] = d["we"] * d["drag"]
-    g = d.groupby(by, observed=True).agg(
-        agenter=("vekt", "size"), personer=("vekt", "sum"), eksponert=("we", "sum"), drag_w=("drag_w", "sum"))
-    pop_drag = (d["drag_w"].sum() / d["we"].sum()) if d["we"].sum() > 0 else np.nan
-    out = pd.DataFrame({
+    return pd.DataFrame({"eksp": exposure(agents, debate, cfg), "drag": pull(agents, debate, cfg)},
+                        index=agents.index)
+
+
+def _agg(d: pd.DataFrame, by: list[str] | None) -> pd.DataFrame:
+    d = d.assign(we=d["vekt"] * d["eksp"])
+    d = d.assign(drag_w=d["we"] * d["drag"])
+    g = d.groupby(by, observed=True) if by else d.assign(_alle=1).groupby("_alle")
+    g = g.agg(agenter=("vekt", "size"), personer=("vekt", "sum"), eksponert=("we", "sum"), drag_w=("drag_w", "sum"))
+    return pd.DataFrame({
         "agenter": g["agenter"],
         "personer": g["personer"].round(),
         "andel_eksponert": g["eksponert"] / g["personer"],
         "eksponerte_personer": g["eksponert"].round(),
         "snitt_dragning": g["drag_w"] / g["eksponert"].where(g["eksponert"] > 0),
-    }).reset_index()
+    }).reset_index(drop=not by)
+
+
+def react(agents: pd.DataFrame, debate: Debate, by: list[str], cfg: dict | None = None,
+          mask: pd.Series | None = None, scores: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Eksponering og dragning per gruppe, vektet med befolkningen. `mask` avgrenser til
+    en målgruppe; indeksen er alltid målt mot hele befolkningen (100 = befolkningssnittet)."""
+    sc = score(agents, debate, cfg) if scores is None else scores
+    d = pd.concat([agents[by + ["vekt"]], sc], axis=1)
+    pop = _agg(d, None).iloc[0]
+    if mask is not None:
+        d = d[mask.to_numpy()]
+    out = _agg(d, by)
     # 100 = trekkes like mye som befolkningen; 130 = 30 % sterkere enn snittet
-    out["indeks_dragning"] = (100 * out["snitt_dragning"] / pop_drag) if pop_drag else np.nan
+    out["indeks_dragning"] = 100 * out["snitt_dragning"] / pop["snitt_dragning"] if pop["snitt_dragning"] else np.nan
     return out.sort_values("eksponerte_personer", ascending=False)
+
+
+def summary(agents: pd.DataFrame, scores: pd.DataFrame, mask: pd.Series | None = None) -> dict:
+    """Totaler for målgruppen og for hele befolkningen."""
+    d = pd.concat([agents[["vekt"]], scores], axis=1)
+    pop = _agg(d, None).iloc[0]
+    seg = _agg(d[mask.to_numpy()], None).iloc[0] if mask is not None else pop
+    idx = 100 * seg["snitt_dragning"] / pop["snitt_dragning"] if pop["snitt_dragning"] else None
+    clean = lambda r: {k: (None if pd.isna(v) else float(v)) for k, v in r.items()}
+    return {"segment": {**clean(seg), "indeks_dragning": idx}, "befolkning": clean(pop)}

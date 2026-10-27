@@ -4,6 +4,17 @@
 # Hvilke verdier gjør en person mottakelig for hver av Signalists 8 argumentdimensjoner.
 # Kilde: verdilaget (ESS, z-skår i panelet). «relevans_okonomi» og «utdanning» er avledet
 # av registerdata (se debates/model.py).
+# Norske navn og hvilken verdi argumentet treffer (vises i grensesnittet).
+navn:
+  "Fairness / equality":            {navn: "Rettferdighet", treffer: "de som vektlegger likeverd og omsorg"}
+  "Health / harm":                  {navn: "Helse og skade", treffer: "de som vektlegger omsorg for andre"}
+  "Order / security / authority":   {navn: "Orden og trygghet", treffer: "de som vektlegger trygghet og regler"}
+  "Freedom / autonomy":             {navn: "Frihet", treffer: "de som vektlegger selvstendighet og endring"}
+  "Institution / law / legitimacy": {navn: "Institusjoner og lov", treffer: "de med høy tillit til systemet"}
+  "Morality / decency":             {navn: "Moral og anstendighet", treffer: "tradisjonsbevisste og omsorgsfulle"}
+  "Economy / cost":                 {navn: "Økonomi og kostnad", treffer: "de med boliglån eller lav inntekt"}
+  "Evidence / effectiveness":       {navn: "Fakta og effekt", treffer: "de med høyere utdanning"}
+
 argumentverdier:
   "Fairness / equality":            {score_fellesskap: 1.0}
   "Health / harm":                  {score_fellesskap: 1.0}

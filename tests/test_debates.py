@@ -87,5 +87,12 @@ def test_debate_api():
     body = r.json()
     assert body["status"].startswith("simulering")
     assert all("presisjon" in g for g in body["grupper"])
+    assert body["segment"]["agenter"] == body["befolkning"]["agenter"]   # uten filter: hele befolkningen
+    oslo = client.post("/debates/react", json={"claim_id": samples[2]["claim_id"], "by": ["aldersband"],
+                                               "filters": {"fylke": ["03"]}}).json()
+    assert 0 < oslo["segment"]["agenter"] < oslo["befolkning"]["agenter"]
+    assert sum(g["agenter"] for g in oslo["grupper"]) == oslo["segment"]["agenter"]
+    assert all({"navn", "treffer", "score"} <= set(a) for a in oslo["debatt"]["argumenter"])
+    assert client.post("/debates/react", json={"claim_id": samples[0]["claim_id"], "filters": {"drop": ["x"]}}).status_code == 422
     assert client.post("/debates/react", json={"claim_id": "finnes-ikke"}).status_code == 404
     assert client.post("/debates/react", json={"claim_id": samples[0]["claim_id"], "by": ["drop table"]}).status_code == 422
