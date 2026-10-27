@@ -76,6 +76,24 @@ make serve     # http://localhost:8090 (utforsker) og /docs (API)
 
 Oppdatere med ferske SSB-tall: `make rebuild-data` (Docker) eller `make data`.
 
+## Demo-miljø (Fly.io)
+
+Merge til `main` → testene kjører (GitHub Actions) → grønt gir automatisk deploy
+til Fly.io (`fly.toml`, region Stockholm). Populasjonen bygges ved første oppstart
+og ligger på volumet `synthpanel_data`; maskinen sover når ingen bruker den.
+
+Engangsoppsett:
+
+```bash
+fly volumes create synthpanel_data --region arn --size 1
+fly secrets set SYNTHPANEL_PASSWORD=... ESS_USER_ID=... ANTHROPIC_API_KEY=...
+fly tokens create deploy   # lim inn som GitHub-secret FLY_API_TOKEN
+```
+
+Legg også `ESS_USER_ID` som GitHub-secret, ellers testes ikke verdilaget i CI.
+Med `SYNTHPANEL_PASSWORD` satt krever alle sider innlogging (bruker `demo`),
+unntatt `/health`.
+
 ## Eksempler
 
 ```bash

@@ -1,0 +1,42 @@
+name: Tester
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ESS_USER_ID: ${{ secrets.ESS_USER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: make install
+
+      # Rådata fra SSB m.fl. caches en uke, så ikke hver kjøring henter alt på nytt
+      - id: week
+        run: echo "week=$(date +%G-%V)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: rawdata-${{ steps.week.outputs.week }}-${{ hashFiles('src/synthpanel/**/fetch.py', 'src/synthpanel/**/layer.py', 'src/synthpanel/personas/names.py', 'src/synthpanel/values/ess.py') }}
+
+      - name: Hent rådata (hopper over det som finnes i cache)
+        run: |
+          if [ ! -f data/raw/manifest.json ]; then make fetch; fi
+          if [ -n "$ESS_USER_ID" ] && [ ! -f data/raw/ess_norway.parquet ]; then make fetch-ess; fi
+      - name: Bygg populasjonen
+        run: make build
+
+      # Uten ESS hoppes verdilaget, politikk og arketyper over – vis det tydelig
+      - name: Kjør tester
+        run: pytest -q -rs
+      - name: Advar hvis ESS mangler
+        if: env.ESS_USER_ID == ''
+        run: echo "::warning::ESS_USER_ID er ikke satt som secret – verdilag, politikk og arketyper ble ikke testet."

@@ -8,6 +8,10 @@ pytestmark = pytest.mark.skipif(
     not (config.PROCESSED_DIR / "agents.parquet").exists(), reason="kjør `make build` først"
 )
 client = TestClient(app)
+# Politisk lag og personas bygger på verdilaget (ESS)
+needs_ess = pytest.mark.skipif(
+    not (config.RAW_DIR / "ess_norway.parquet").exists(), reason="ESS ikke hentet (krever ESS_USER_ID)"
+)
 
 
 def test_health():
@@ -42,6 +46,7 @@ def test_frontend_served_and_docs_still_work():
     assert client.get("/docs").status_code == 200
 
 
+@needs_ess
 def test_dimensions_config_matches_data():
     cfg = client.get("/dimensions").json()
     assert [t["id"] for t in cfg["tiers"]] == ["hygiene", "motivasjon", "verdi", "arketype"]
@@ -79,6 +84,7 @@ def test_personas_cover_segment_and_respect_filters():
     assert [p["id"] for p in again] == [p["id"] for p in ps]  # samme utvalg -> samme personas
 
 
+@needs_ess
 def test_personas_small_segment_is_refused():
     d = client.get("/population/personas", params={"fylke": "56", "parti_2025": "MDG", "aldersband": "80+"}).json()
     assert d["personas"] == [] and d["melding"]

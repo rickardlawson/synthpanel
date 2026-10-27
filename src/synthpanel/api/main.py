@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, create_model
 
 from synthpanel import __version__, config
+from synthpanel.api.auth import BasicAuthMiddleware
 
 app = FastAPI(
     title="Synthpanel",
@@ -31,6 +32,7 @@ app = FastAPI(
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=2000)
+app.add_middleware(BasicAuthMiddleware)  # aktiv bare når SYNTHPANEL_PASSWORD er satt
 
 # Dimensjoner som kan filtreres og grupperes på (hviteliste – brukes i SQL).
 DIMENSIONS = {

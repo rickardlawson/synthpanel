@@ -1,0 +1,39 @@
+# Demo-miljø for Synthpanel på Fly.io (Stockholm).
+# Populasjonen bygges ved første oppstart og ligger på volumet «synthpanel_data».
+# Hemmeligheter settes med `fly secrets set` – aldri her:
+#   SYNTHPANEL_PASSWORD (slår på innlogging), ESS_USER_ID, ANTHROPIC_API_KEY
+
+app = "synthpanel"           # endre hvis appen fikk et annet navn i Fly
+primary_region = "arn"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8090"
+  SYNTHPANEL_DATA_DIR = "/app/data"
+  SYNTHPANEL_USER = "demo"
+
+[mounts]
+  source = "synthpanel_data"
+  destination = "/app/data"
+
+[http_service]
+  internal_port = 8090
+  force_https = true
+  auto_stop_machines = "stop"   # sover når ingen bruker den – billig for en demo
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    # Første oppstart henter SSB-data og bygger populasjonen (~5 min)
+    grace_period = "600s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
