@@ -19,11 +19,12 @@ PARTIES = ["RØDT", "SV", "A", "SP", "MDG", "KRF", "V", "H", "FRP"]
 def _get(path: str) -> dict:
     for attempt in range(4):
         r = httpx.get(VALG_API + path, timeout=30)
-        if r.status_code == 200:
+        # Ved vedlikehold svarer API-et 200 med en HTML-side – det teller som feil
+        if r.status_code == 200 and "json" in r.headers.get("content-type", ""):
             return r.json()
         time.sleep(1 + attempt)
     r.raise_for_status()
-    return {}
+    raise ValueError(f"Valgdirektoratet svarte ikke med JSON for {path} (nede for vedlikehold?)")
 
 
 def _kommune_row(href: str, dist_name: str) -> dict:
@@ -47,7 +48,22 @@ def _kommune_row(href: str, dist_name: str) -> dict:
     return row
 
 
+SEED = config.CONFIG_DIR / "seed" / "valg_resultat_2025.parquet"
+
+
 def fetch_results(year: int = 2025) -> pd.DataFrame:
+    """Stemmer per parti i hver kommune. Valgresultatet endrer seg ikke, så er
+    Valgdirektoratet nede brukes kopien i configs/seed/ (hentet 27.10.2026)."""
+    try:
+        return _fetch_results(year)
+    except (httpx.HTTPError, ValueError, KeyError) as e:
+        if year == 2025 and SEED.exists():
+            print(f"Valgdirektoratet utilgjengelig ({e}) – bruker lagret kopi av valgresultatet 2025")
+            return pd.read_parquet(SEED)
+        raise
+
+
+def _fetch_results(year: int) -> pd.DataFrame:
     """Stemmer per parti i hver kommune (stortingsvalg). Blanke holdes utenfor partiandelene."""
     from concurrent.futures import ThreadPoolExecutor
 

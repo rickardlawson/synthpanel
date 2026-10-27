@@ -1,39 +1,43 @@
 #!/bin/sh
 # Bygger populasjonen ved første oppstart (data ligger i et volum og overlever omstart).
-set -e
-if [ ! -f "$SYNTHPANEL_DATA_DIR/processed/agents.parquet" ]; then
-  echo "Ingen populasjon funnet – henter fra SSB og bygger (tar noen minutter)..."
-  python -m synthpanel.frame.fetch
-  python -m synthpanel.politics.fetch
-  python -m synthpanel.media.layer
-  python -m synthpanel.leisure.layer
-  python -m synthpanel.household.fetch
-  if [ -n "$ESS_USER_ID" ]; then
-    python -m synthpanel.values.ess || echo "ADVARSEL: klarte ikke hente ESS (sjekk ESS_USER_ID) – bygger uten verdilag"
+#
+# Hvert hentesteg merkes som ferdig (raw/.ok_<steg>), så en omstart henter ikke alt
+# på nytt. Feiler en ekstern kilde, fortsetter oppstarten uten det laget – bare
+# befolkningsrammen (SSB) er påkrevd.
+RAW="$SYNTHPANEL_DATA_DIR/raw"
+AGENTS="$SYNTHPANEL_DATA_DIR/processed/agents.parquet"
+mkdir -p "$RAW"
+CHANGED=0
+
+step() {  # step <navn> <påkrevd:ja|nei> <kommando...>
+  name=$1; required=$2; shift 2
+  [ -f "$RAW/.ok_$name" ] && return 0
+  echo "Henter: $name"
+  if "$@"; then
+    touch "$RAW/.ok_$name"; CHANGED=1
+  elif [ "$required" = "ja" ]; then
+    echo "FEIL: $name feilet og er påkrevd – avbryter"; exit 1
   else
-    echo "ESS_USER_ID ikke satt – bygger uten verdilag"
+    echo "ADVARSEL: $name feilet – fortsetter uten (prøves igjen ved neste oppstart)"
   fi
-  python -m synthpanel.frame.build
+}
+
+step ramme      ja  python -m synthpanel.frame.fetch
+step politikk   nei python -m synthpanel.politics.fetch
+step medier     nei python -m synthpanel.media.layer
+step fritid     nei python -m synthpanel.leisure.layer
+step husholdning nei python -m synthpanel.household.fetch
+if [ -n "$ESS_USER_ID" ]; then
+  step ess nei python -m synthpanel.values.ess
+else
+  echo "ESS_USER_ID ikke satt – bygger uten verdilag"
 fi
-# Verdilaget mangler (ESS feilet eller ID kom senere): hent og bygg på nytt.
-if [ -n "$ESS_USER_ID" ] && [ ! -f "$SYNTHPANEL_DATA_DIR/raw/ess_norway.parquet" ]; then
-  echo "Verdilaget mangler – henter ESS og bygger populasjonen på nytt..."
-  if python -m synthpanel.values.ess; then
-    python -m synthpanel.frame.build
-  else
-    echo "ADVARSEL: klarte ikke hente ESS (sjekk ESS_USER_ID) – fortsetter uten verdilag"
-  fi
+step geo        nei python -m synthpanel.geo.fetch
+step navn       nei python -m synthpanel.personas.names
+
+if [ ! -f "$AGENTS" ] || [ "$CHANGED" = "1" ]; then
+  echo "Bygger populasjonen..."
+  python -m synthpanel.frame.build || { echo "FEIL: byggingen feilet"; exit 1; }
 fi
-# Husholdningslaget (inntekt i kr, forbruk, kjøp) kom etter første versjon: hent og bygg på nytt ved behov.
-if [ ! -f "$SYNTHPANEL_DATA_DIR/raw/hh_income_deciles_12558.parquet" ]; then
-  echo "Henter husholdningsdata fra SSB og bygger populasjonen på nytt..."
-  python -m synthpanel.household.fetch && python -m synthpanel.frame.build
-fi
-# Geodata til kartet (kommunegrenser og 1 km-rutenett, ~2 min første gang)
-if [ ! -f "$SYNTHPANEL_DATA_DIR/raw/geo_grid_1km.parquet" ]; then
-  python -m synthpanel.geo.fetch || echo "Fikk ikke hentet geodata – kartfanen virker ikke før geodata er hentet"
-fi
-if [ ! -f "$SYNTHPANEL_DATA_DIR/raw/names_first_10467.parquet" ]; then
-  python -m synthpanel.personas.names || echo "Fikk ikke hentet navnestatistikk – personas bruker reserveliste"
-fi
+
 exec uvicorn synthpanel.api.main:app --host 0.0.0.0 --port "${PORT:-8090}"
