@@ -1,0 +1,26 @@
+# Debattkobling (L5 v0): hvordan en Signalist-debatt treffer panelet.
+# Alle tall her er skjønn – ikke kalibrert. Endres de, endres resultatet.
+
+# Hvilke verdier gjør en person mottakelig for hver av Signalists 8 argumentdimensjoner.
+# Kilde: verdilaget (ESS, z-skår i panelet). «relevans_okonomi» og «utdanning» er avledet
+# av registerdata (se debates/model.py).
+argumentverdier:
+  "Fairness / equality":            {score_fellesskap: 1.0}
+  "Health / harm":                  {score_fellesskap: 1.0}
+  "Order / security / authority":   {score_trygghet: 1.0}
+  "Freedom / autonomy":             {score_apenhet: 1.0}
+  "Institution / law / legitimacy": {score_tillit: 1.0}
+  "Morality / decency":             {score_trygghet: 0.5, score_fellesskap: 0.5}
+  "Economy / cost":                 {relevans_okonomi: 1.0}
+  "Evidence / effectiveness":       {utdanning: 1.0}
+
+# Hvor mye verdiene forsterker et argument: mottakelighet = exp(beta × z).
+beta: 0.5
+
+# Eksponering: andel av et nettsteds lesere som faktisk ser én bestemt sak,
+# og reserveverdier når Signalist ikke oppgir lesertall.
+andel_av_lesere_per_sak: 0.10
+lesere_mangler: {lokal: 5000, nasjonal: 50000}
+maks_rekkevidde_per_sak: 0.5
+# Politisk interesse (ESS) skalerer sannsynligheten for å få med seg saken.
+interesse_faktor: {"høy": 1.4, "lav": 0.7}

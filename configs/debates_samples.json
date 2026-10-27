@@ -1,0 +1,603 @@
+{
+ "kilde": "Signalist AI_staging via Tor Morten, 27.10.2026. Kun ID-er og Signalists avledede score – ingen artikkeltekst.",
+ "debatter": [
+  {
+   "claim_id": "om-bankenes-overskudd-c0300e86",
+   "statement": "Om bankenes overskudd",
+   "stance_axis": {
+    "-10": "Begrense bankenes overskudd og regulere markedsmakt",
+    "+10": "Beholde dagens profittnivå og bankenes rolle uendret"
+   },
+   "language": "no",
+   "article_count": 42,
+   "created_at": "2026-10-04T19:16:56.627026+00:00",
+   "last_matched_at": "2026-10-22T23:14:12.593058+00:00",
+   "summary": {
+    "claim_id": "om-bankenes-overskudd-c0300e86",
+    "article_amount": 14,
+    "article_amount_delta": -13,
+    "overall_stance_score": -0.9,
+    "overall_stance_score_delta": 3.5,
+    "overall_stance_label": "NEUTRAL",
+    "dominant_argument_name": "Freedom / autonomy",
+    "dominant_argument_score": 7.0,
+    "argument_count_detected": 7
+   },
+   "arguments_aggregate": [
+    {
+     "argument_name": "Health / harm",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    },
+    {
+     "argument_name": "Economy / cost",
+     "score": -4.5,
+     "prior_score": -6.3,
+     "delta": 1.8
+    },
+    {
+     "argument_name": "Freedom / autonomy",
+     "score": 7.0,
+     "prior_score": 0.0,
+     "delta": 7.0
+    },
+    {
+     "argument_name": "Fairness / equality",
+     "score": -5.6,
+     "prior_score": -7.6,
+     "delta": 1.9
+    },
+    {
+     "argument_name": "Morality / decency",
+     "score": -1.4,
+     "prior_score": -7.2,
+     "delta": 5.8
+    },
+    {
+     "argument_name": "Order / security / authority",
+     "score": 4.5,
+     "prior_score": -2.7,
+     "delta": 7.2
+    },
+    {
+     "argument_name": "Evidence / effectiveness",
+     "score": -4.0,
+     "prior_score": -5.1,
+     "delta": 1.0
+    },
+    {
+     "argument_name": "Institution / law / legitimacy",
+     "score": -2.9,
+     "prior_score": -6.2,
+     "delta": 3.3
+    }
+   ],
+   "arguments_by_role": [
+    {
+     "holder": "JOURNALIST",
+     "score": -1.7,
+     "prior_score": -7.3,
+     "delta": 5.6
+    },
+    {
+     "holder": "POLITICIAN",
+     "score": -7.7,
+     "prior_score": -7.6,
+     "delta": -0.1
+    },
+    {
+     "holder": "GOVERNMENT_OR_REGULATOR",
+     "score": 0.0,
+     "prior_score": -7.3,
+     "delta": 7.3
+    },
+    {
+     "holder": "NGO_OR_ADVOCACY_GROUP",
+     "score": -7.0,
+     "prior_score": 0.0,
+     "delta": -7.0
+    },
+    {
+     "holder": "EXPERT_OR_ANALYST",
+     "score": -1.7,
+     "prior_score": -1.7,
+     "delta": 0.0
+    },
+    {
+     "holder": "ORDINARY_CITIZEN",
+     "score": -6.1,
+     "prior_score": -8.6,
+     "delta": 2.5
+    }
+   ],
+   "sample_articles": {
+    "total": 14,
+    "limit": 2,
+    "offset": 0,
+    "articles": [
+     {
+      "article_uid": "21225_250168",
+      "source_name": "Dagens Næringsliv, page 28",
+      "published_at": "2026-10-22T23:06:38Z",
+      "county_name": null,
+      "region_name": null,
+      "media_type_name": "Nasjonale medier",
+      "opoint_media_type": "PRINT",
+      "is_editorial": true,
+      "site_readership": 293000,
+      "source_type": "EDITORIAL",
+      "arguments": [
+       {
+        "argument_name": "Economy / cost",
+        "direction": -5.0,
+        "stance_label": "AGAINST",
+        "confidence_score": 4,
+        "holder": "EXPERT_OR_ANALYST"
+       },
+       {
+        "argument_name": "Evidence / effectiveness",
+        "direction": -7.0,
+        "stance_label": "AGAINST",
+        "confidence_score": 5,
+        "holder": "EXPERT_OR_ANALYST"
+       },
+       {
+        "argument_name": "Fairness / equality",
+        "direction": 0.0,
+        "stance_label": "NEUTRAL",
+        "confidence_score": 5,
+        "holder": "EXPERT_OR_ANALYST"
+       },
+       {
+        "argument_name": "Institution / law / legitimacy",
+        "direction": -6.0,
+        "stance_label": "AGAINST",
+        "confidence_score": 5,
+        "holder": "EXPERT_OR_ANALYST"
+       },
+       {
+        "argument_name": "Order / security / authority",
+        "direction": 5.0,
+        "stance_label": "FOR",
+        "confidence_score": 4,
+        "holder": "EXPERT_OR_ANALYST"
+       }
+      ],
+      "overall_stance_score": -2.6
+     },
+     {
+      "article_uid": "70_560481",
+      "source_name": "Dagens Næringsliv",
+      "published_at": "2026-10-22T16:12:15Z",
+      "county_name": null,
+      "region_name": null,
+      "media_type_name": "Nasjonale medier",
+      "opoint_media_type": "WEB",
+      "is_editorial": true,
+      "site_readership": 35489,
+      "source_type": "EDITORIAL",
+      "arguments": [
+       {
+        "argument_name": "Economy / cost",
+        "direction": -7.0,
+        "stance_label": "AGAINST",
+        "confidence_score": 5,
+        "holder": "EXPERT_OR_ANALYST"
+       },
+       {
+        "argument_name": "Evidence / effectiveness",
+        "direction": -6.0,
+        "stance_label": "AGAINST",
+        "confidence_score": 5,
+        "holder": "EXPERT_OR_ANALYST"
+       },
+       {
+        "argument_name": "Fairness / equality",
+        "direction": -3.0,
+        "stance_label": "AGAINST",
+        "confidence_score": 4,
+        "holder": "EXPERT_OR_ANALYST"
+       },
+       {
+        "argument_name": "Institution / law / legitimacy",
+        "direction": 0.0,
+        "stance_label": "MIXED",
+        "confidence_score": 5,
+        "holder": "EXPERT_OR_ANALYST"
+       },
+       {
+        "argument_name": "Order / security / authority",
+        "direction": 4.0,
+        "stance_label": "FOR",
+        "confidence_score": 4,
+        "holder": "EXPERT_OR_ANALYST"
+       }
+      ],
+      "overall_stance_score": -2.4
+     }
+    ]
+   }
+  },
+  {
+   "claim_id": "om-bankkonkurransen-bc39d6eb",
+   "statement": "Om bankkonkurransen",
+   "stance_axis": {
+    "-10": "Begrense bankenes markedsmakt; styrke konkurransen i bankmarkedet",
+    "+10": "Beholde dagens konkurranseforhold og bankenes markedsposisjon"
+   },
+   "language": "no",
+   "article_count": 18,
+   "created_at": "2026-10-06T15:42:34.964368+00:00",
+   "last_matched_at": "2026-10-26T00:08:10.985130+00:00",
+   "summary": {
+    "claim_id": "om-bankkonkurransen-bc39d6eb",
+    "article_amount": 16,
+    "article_amount_delta": 14,
+    "overall_stance_score": -4.1,
+    "overall_stance_score_delta": -1.2,
+    "overall_stance_label": "AGAINST",
+    "dominant_argument_name": "Fairness / equality",
+    "dominant_argument_score": -7.0,
+    "argument_count_detected": 6
+   },
+   "arguments_aggregate": [
+    {
+     "argument_name": "Health / harm",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    },
+    {
+     "argument_name": "Economy / cost",
+     "score": -5.6,
+     "prior_score": -8.0,
+     "delta": 2.4
+    },
+    {
+     "argument_name": "Freedom / autonomy",
+     "score": -4.3,
+     "prior_score": 0.0,
+     "delta": -4.3
+    },
+    {
+     "argument_name": "Fairness / equality",
+     "score": -7.0,
+     "prior_score": 0.0,
+     "delta": -7.0
+    },
+    {
+     "argument_name": "Morality / decency",
+     "score": -6.0,
+     "prior_score": 0.0,
+     "delta": -6.0
+    },
+    {
+     "argument_name": "Order / security / authority",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    },
+    {
+     "argument_name": "Evidence / effectiveness",
+     "score": -4.8,
+     "prior_score": -8.5,
+     "delta": 3.7
+    },
+    {
+     "argument_name": "Institution / law / legitimacy",
+     "score": -5.3,
+     "prior_score": -6.5,
+     "delta": 1.2
+    }
+   ],
+   "arguments_by_role": [
+    {
+     "holder": "JOURNALIST",
+     "score": -6.4,
+     "prior_score": 0.0,
+     "delta": -6.4
+    },
+    {
+     "holder": "POLITICIAN",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    },
+    {
+     "holder": "GOVERNMENT_OR_REGULATOR",
+     "score": -6.3,
+     "prior_score": 0.0,
+     "delta": -6.3
+    },
+    {
+     "holder": "NGO_OR_ADVOCACY_GROUP",
+     "score": -4.2,
+     "prior_score": -7.7,
+     "delta": 3.4
+    },
+    {
+     "holder": "EXPERT_OR_ANALYST",
+     "score": -8.3,
+     "prior_score": 0.0,
+     "delta": -8.3
+    },
+    {
+     "holder": "ORDINARY_CITIZEN",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    }
+   ],
+   "sample_articles": {
+    "total": 16,
+    "limit": 2,
+    "offset": 0,
+    "articles": [
+     {
+      "article_uid": "21225_250254",
+      "source_name": "Dagens Næringsliv, page 31",
+      "published_at": "2026-10-26T00:04:23Z",
+      "county_name": null,
+      "region_name": null,
+      "media_type_name": "Nasjonale medier",
+      "opoint_media_type": "PRINT",
+      "is_editorial": true,
+      "site_readership": 293000,
+      "source_type": "SELF_PUBLISHED",
+      "arguments": [
+       {
+        "argument_name": "Economy / cost",
+        "direction": 8.0,
+        "stance_label": "FOR",
+        "confidence_score": 5,
+        "holder": "NGO_OR_ADVOCACY_GROUP"
+       },
+       {
+        "argument_name": "Evidence / effectiveness",
+        "direction": 8.0,
+        "stance_label": "FOR",
+        "confidence_score": 5,
+        "holder": "NGO_OR_ADVOCACY_GROUP"
+       },
+       {
+        "argument_name": "Freedom / autonomy",
+        "direction": 6.0,
+        "stance_label": "FOR",
+        "confidence_score": 4,
+        "holder": "NGO_OR_ADVOCACY_GROUP"
+       },
+       {
+        "argument_name": "Institution / law / legitimacy",
+        "direction": 5.0,
+        "stance_label": "FOR",
+        "confidence_score": 4,
+        "holder": "NGO_OR_ADVOCACY_GROUP"
+       }
+      ],
+      "overall_stance_score": 6.8
+     },
+     {
+      "article_uid": "29854_144601",
+      "source_name": "Finnmarken, page 13",
+      "published_at": "2026-10-16T03:00:00Z",
+      "county_name": "Finnmark",
+      "region_name": "Nord-Norge",
+      "media_type_name": "Lokale medier",
+      "opoint_media_type": "PRINT",
+      "is_editorial": true,
+      "site_readership": null,
+      "source_type": "EDITORIAL",
+      "arguments": [
+       {
+        "argument_name": "Economy / cost",
+        "direction": -7.0,
+        "stance_label": "FOR",
+        "confidence_score": 5,
+        "holder": "JOURNALIST"
+       },
+       {
+        "argument_name": "Freedom / autonomy",
+        "direction": -8.0,
+        "stance_label": "FOR",
+        "confidence_score": 5,
+        "holder": "JOURNALIST"
+       },
+       {
+        "argument_name": "Institution / law / legitimacy",
+        "direction": -6.0,
+        "stance_label": "FOR",
+        "confidence_score": 5,
+        "holder": "GOVERNMENT_OR_REGULATOR"
+       }
+      ],
+      "overall_stance_score": -7.0
+     }
+    ]
+   }
+  },
+  {
+   "claim_id": "etablerte-bankkunder-betaler-høyere-rente-enn-4449c1c3",
+   "statement": "Etablerte bankkunder betaler høyere rente enn nye kunder.",
+   "stance_axis": {
+    "-10": "Etablerte kunder betaler ikke høyere rente enn nye kunder; forskjellene er minimale eller fraværende.",
+    "+10": "Etablerte kunder betaler klart og målbar høyere rente enn nye kunder, med økonomisk betydning."
+   },
+   "language": "no",
+   "article_count": 12,
+   "created_at": "2026-10-02T04:13:24.142680+00:00",
+   "last_matched_at": "2026-10-02T17:55:09.045548+00:00",
+   "summary": {
+    "claim_id": "etablerte-bankkunder-betaler-høyere-rente-enn-4449c1c3",
+    "article_amount": 12,
+    "article_amount_delta": 12,
+    "overall_stance_score": 3.5,
+    "overall_stance_score_delta": 3.5,
+    "overall_stance_label": "FOR",
+    "dominant_argument_name": "Evidence / effectiveness",
+    "dominant_argument_score": 8.0,
+    "argument_count_detected": 5
+   },
+   "arguments_aggregate": [
+    {
+     "argument_name": "Health / harm",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    },
+    {
+     "argument_name": "Economy / cost",
+     "score": 7.8,
+     "prior_score": 0.0,
+     "delta": 7.8
+    },
+    {
+     "argument_name": "Freedom / autonomy",
+     "score": 5.3,
+     "prior_score": 0.0,
+     "delta": 5.3
+    },
+    {
+     "argument_name": "Fairness / equality",
+     "score": 7.6,
+     "prior_score": 0.0,
+     "delta": 7.6
+    },
+    {
+     "argument_name": "Morality / decency",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    },
+    {
+     "argument_name": "Order / security / authority",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    },
+    {
+     "argument_name": "Evidence / effectiveness",
+     "score": 8.0,
+     "prior_score": 0.0,
+     "delta": 8.0
+    },
+    {
+     "argument_name": "Institution / law / legitimacy",
+     "score": -0.3,
+     "prior_score": 0.0,
+     "delta": -0.3
+    }
+   ],
+   "arguments_by_role": [
+    {
+     "holder": "JOURNALIST",
+     "score": 7.6,
+     "prior_score": 0.0,
+     "delta": 7.6
+    },
+    {
+     "holder": "POLITICIAN",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    },
+    {
+     "holder": "GOVERNMENT_OR_REGULATOR",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    },
+    {
+     "holder": "NGO_OR_ADVOCACY_GROUP",
+     "score": 7.7,
+     "prior_score": 0.0,
+     "delta": 7.7
+    },
+    {
+     "holder": "EXPERT_OR_ANALYST",
+     "score": 3.9,
+     "prior_score": 0.0,
+     "delta": 3.9
+    },
+    {
+     "holder": "ORDINARY_CITIZEN",
+     "score": 0.0,
+     "prior_score": 0.0,
+     "delta": 0.0
+    }
+   ],
+   "sample_articles": {
+    "total": 12,
+    "limit": 2,
+    "offset": 0,
+    "articles": [
+     {
+      "article_uid": "384_516245",
+      "source_name": "iFinnmark - Forside",
+      "published_at": "2026-10-02T17:46:20Z",
+      "county_name": "Finnmark",
+      "region_name": "Nord-Norge",
+      "media_type_name": "Lokale medier",
+      "opoint_media_type": "WEB",
+      "is_editorial": true,
+      "site_readership": 85750,
+      "source_type": "EDITORIAL",
+      "arguments": [
+       {
+        "argument_name": "Economy / cost",
+        "direction": 8.0,
+        "stance_label": "FOR",
+        "confidence_score": 5,
+        "holder": "NGO_OR_ADVOCACY_GROUP"
+       },
+       {
+        "argument_name": "Evidence / effectiveness",
+        "direction": 7.0,
+        "stance_label": "FOR",
+        "confidence_score": 5,
+        "holder": "NGO_OR_ADVOCACY_GROUP"
+       },
+       {
+        "argument_name": "Fairness / equality",
+        "direction": 7.0,
+        "stance_label": "FOR",
+        "confidence_score": 5,
+        "holder": "NGO_OR_ADVOCACY_GROUP"
+       }
+      ],
+      "overall_stance_score": 7.3
+     },
+     {
+      "article_uid": "231_295655",
+      "source_name": "Budstikka - Forsiden",
+      "published_at": "2026-10-02T09:13:49Z",
+      "county_name": null,
+      "region_name": null,
+      "media_type_name": "Lokale medier",
+      "opoint_media_type": "WEB",
+      "is_editorial": true,
+      "site_readership": 355804,
+      "source_type": "EDITORIAL",
+      "arguments": [
+       {
+        "argument_name": "Economy / cost",
+        "direction": 7.0,
+        "stance_label": "FOR",
+        "confidence_score": 5,
+        "holder": "JOURNALIST"
+       },
+       {
+        "argument_name": "Fairness / equality",
+        "direction": 8.0,
+        "stance_label": "FOR",
+        "confidence_score": 4,
+        "holder": "EXPERT_OR_ANALYST"
+       }
+      ],
+      "overall_stance_score": 7.5
+     }
+    ]
+   }
+  }
+ ]
+}
