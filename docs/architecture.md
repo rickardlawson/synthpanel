@@ -365,7 +365,9 @@ fylke og lesertall. `POST /debates/react` regner for hver agent
 | Economy / cost | egen økonomi: eier i arbeidsfør alder, lavinntekt |
 | Evidence / effectiveness | utdanning |
 
-Svaret per gruppe: andel eksponert, snitt dragning og **indeks** (100 = befolkningen).
+Svaret per gruppe: andel eksponert, snitt dragning og **indeks** (100 = befolkningen). Kan avgrenses til en
+målgruppe (`filters`); indeksen måles alltid mot hele befolkningen. Fanen «Debatter» i grensesnittet viser
+samme tall som tekst, akse, gruppeliste og argumentoversikt.
 Det sier *hvem debatten når og hvem argumentene treffer hardest*, ikke hva folk mener –
 mening krever et målt startpunkt per sak (prinsipp 1 og 2).
 
